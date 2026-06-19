@@ -1,0 +1,6 @@
+[build.environment]
+  NPM_FLAGS = "--include=dev"
+
+[build]
+    command = "chmod +x node_modules/.bin/* && npm run build"
+    publish = "dist"

@@ -1,0 +1,74 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+@theme {
+  --color-primary: #4338ca;
+  --color-accent: #7c3aed;
+  --color-accent-glow: rgba(124, 58, 237, 0.2);
+
+  --color-bg-light: #ffffff;
+  --color-bg-dark: #000000;
+
+  --color-surface-light: #f8fafc;
+  --color-surface-dark: #0a0a0a;
+
+  --color-border-light: #e2e8f0;
+  --color-border-dark: #1e1e1e;
+}
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  :root {
+    --background: #ffffff;
+    --foreground: #0f172a;
+    --surface: #f8fafc;
+    --surface-hover: #f1f5f9;
+    --border: #e2e8f0;
+    --primary: #4f46e5;
+    --primary-hover: #4338ca;
+    --accent: #7c3aed;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: #0f172a;
+    --foreground: #f8fafc;
+    --surface: #1e293b;
+    --surface-hover: #334155;
+    --border: #1e293b;
+    --primary: #6366f1;
+    --accent: #a78bfa;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: 'Inter', sans-serif;
+    letter-spacing: -0.01em;
+    font-weight: 600;
+  }
+}
+
+@layer utilities {
+  .glass {
+    @apply bg-white/70 dark:bg-slate-900/70 backdrop-blur-md border border-slate-200 dark:border-slate-800;
+  }
+
+  .card-premium {
+    @apply bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm transition-all duration-200 hover:shadow-md;
+  }
+
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-violet-600;
+  }
+}
