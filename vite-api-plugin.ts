@@ -23,6 +23,10 @@ function createVercelResponse(res: ServerResponse) {
       statusCode = code;
       return vercelRes;
     },
+    setHeader(name: string, value: string) {
+      res.setHeader(name, value);
+      return vercelRes;
+    },
     json(data: unknown) {
       if (!res.headersSent) {
         res.statusCode = statusCode;
@@ -32,6 +36,13 @@ function createVercelResponse(res: ServerResponse) {
       return vercelRes;
     },
     send(data: string) {
+      if (!res.headersSent) {
+        res.statusCode = statusCode;
+        res.end(data);
+      }
+      return vercelRes;
+    },
+    end(data?: string) {
       if (!res.headersSent) {
         res.statusCode = statusCode;
         res.end(data);
