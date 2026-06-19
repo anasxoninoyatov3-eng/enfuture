@@ -90,26 +90,38 @@ The JSON must follow this shape exactly:
 
     const text = result.response.text();
     const lesson = parseJsonLoose(text);
-    if (!lesson) throw new Error('Gemini JSON format rejected');
+    if (!lesson) {
+      console.error('Gemini returned invalid JSON:', text);
+      throw new Error('Gemini JSON format rejected');
+    }
     return res.status(200).json({ lesson });
   } catch (error: any) {
-    console.warn('Gemini failed, trying fallbacks:', error.message);
+    console.warn('Gemini failed, trying fallbacks. Error:', error.message);
     try {
-      const text = await (Math.random() > 0.5 ? callGroq(systemInstruction, userPrompt) : callPollinations(systemInstruction, userPrompt));
+      // For Vercel, let's prioritize Pollinations if keys might be missing
+      const text = await callPollinations(systemInstruction, userPrompt);
       const lesson = parseJsonLoose(text);
-      if (!lesson) throw new Error('Fallback JSON format rejected');
-      return res.status(200).json({ lesson });
+      if (lesson) return res.status(200).json({ lesson });
+      
+      // Try Groq as second fallback
+      const groqText = await callGroq(systemInstruction, userPrompt);
+      const groqLesson = parseJsonLoose(groqText);
+      if (groqLesson) return res.status(200).json({ lesson: groqLesson });
+      
+      throw new Error('All JSON parsing failed');
     } catch (fallbackError: any) {
-      console.warn('First fallback failed, trying second fallback:', fallbackError.message);
-      try {
-        const text = await callPollinations(systemInstruction, userPrompt);
-        const lesson = parseJsonLoose(text);
-        if (!lesson) throw new Error('Final fallback JSON format rejected');
-        return res.status(200).json({ lesson });
-      } catch (finalError: any) {
-        console.error('All AI providers failed:', finalError);
-        res.status(500).json({ error: 'AI xizmati vaqtincha mavjud emas. Iltimos keyinroq urinib ko\'ring.' });
-      }
+      console.error('All AI providers failed:', fallbackError);
+      res.status(500).json({ 
+        error: 'AI xizmati vaqtincha mavjud emas.',
+        debug: {
+          mainError: error.message,
+          fallbackError: fallbackError.message,
+          env: {
+            hasGemini: !!GEMINI_KEY,
+            hasGroq: !!GROQ_KEY
+          }
+        }
+      });
     }
   }
 }

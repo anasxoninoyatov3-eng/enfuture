@@ -74,17 +74,18 @@ export default async function handler(req: any, res: any) {
       };
       res.status(200).json(responseData);
     } catch (fallbackError: any) {
-      console.warn('First fallback fallback failed, trying second fallback:', fallbackError.message);
-      try {
-        const text = await callPollinations(systemInstruction, userPrompt);
-        const responseData = {
-          candidates: [{ content: { parts: [{ text: text }] } }]
-        };
-        res.status(200).json(responseData);
-      } catch (finalError: any) {
-        console.error('All AI providers failed:', finalError);
-        res.status(500).json({ error: finalError.message || 'Internal Server Error' });
-      }
+      console.error('All AI providers failed:', fallbackError);
+      res.status(500).json({ 
+        error: fallbackError.message || 'Internal Server Error',
+        debug: {
+          mainError: error.message,
+          fallbackError: fallbackError.message,
+          env: {
+            hasGemini: !!GEMINI_KEY,
+            hasGroq: !!GROQ_KEY
+          }
+        }
+      });
     }
   }
 }
