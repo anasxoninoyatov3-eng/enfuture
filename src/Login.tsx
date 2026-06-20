@@ -1,25 +1,14 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/Button';
-import { Input } from '@/Input';
 import { Card, CardContent } from '@/Card';
-import { Mail, Lock, Loader2, ArrowRight } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useUserStore } from '@/userStore';
 import { useGoogleLogin } from '@react-oauth/google';
 import { motion } from 'framer-motion';
 
-const loginSchema = z.object({
-  email: z.string().email('Valid email address required'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-});
-
-type LoginFormValues = z.infer<typeof loginSchema>;
-
 const GoogleIcon = () => (
-  <svg className="h-5 w-5 mr-3" viewBox="0 0 24 24">
+  <svg className="h-5 w-5" viewBox="0 0 24 24">
     <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
     <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
     <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
@@ -29,30 +18,14 @@ const GoogleIcon = () => (
 
 export const LoginPage = () => {
   const navigate = useNavigate();
-  const { login, isAuthenticated } = useUserStore();
+  const { isAuthenticated, syncGoogleUser } = useUserStore();
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const [loginError, setLoginError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isAuthenticated) {
       navigate('/dashboard');
     }
   }, [isAuthenticated, navigate]);
-
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema)
-  });
-
-  const onSubmit = async (data: LoginFormValues) => {
-    setLoginError(null);
-    await new Promise(r => setTimeout(r, 800));
-    const success = login(data.email, data.password);
-    if (success) {
-      navigate('/dashboard');
-    } else {
-      setLoginError('Invalid email or password');
-    }
-  };
 
   const onGoogleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
@@ -62,9 +35,7 @@ export const LoginPage = () => {
           headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
         }).then(res => res.json());
 
-        // For Google login, we use the atomic syncGoogleUser method
-        // This ensures name and picture are always fresh and prevents race conditions
-        useUserStore.getState().syncGoogleUser(userInfo);
+        syncGoogleUser(userInfo);
         navigate('/dashboard');
       } catch (err) {
         console.error("Auth Exception", err);
@@ -75,84 +46,47 @@ export const LoginPage = () => {
   });
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="w-full max-w-[440px] px-6"
-    >
-      <div className="text-center mb-12 space-y-4">
-        <div className="h-12 w-12 rounded-lg bg-indigo-600 mx-auto flex items-center justify-center text-white font-bold text-xl">E</div>
-        <h1 className="text-4xl font-bold text-slate-900 dark:text-white leading-tight">Welcome Back</h1>
-        <p className="text-slate-500 dark:text-slate-400 font-medium text-lg leading-tight">Continue your learning journey with E.</p>
-      </div>
+    <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 dark:bg-slate-950 p-6">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="w-full max-w-[400px]"
+      >
+        <div className="text-center mb-10 space-y-4">
+          <div className="h-16 w-16 rounded-2xl bg-indigo-600 mx-auto flex items-center justify-center text-white font-black text-3xl shadow-xl shadow-indigo-200 dark:shadow-none">E</div>
+          <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight">ENK English</h1>
+          <p className="text-slate-500 dark:text-slate-400 font-medium text-lg leading-tight">Your gateway to mastering English.</p>
+        </div>
 
-      <Card className="border border-slate-100 shadow-lg rounded-2xl overflow-hidden p-2 bg-white dark:bg-slate-900">
-        <CardContent className="p-8 space-y-6">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => onGoogleLogin()}
-            disabled={isGoogleLoading}
-            className="w-full h-12 rounded-lg border border-slate-100 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:bg-slate-800 shadow-sm transition-all font-bold text-sm text-slate-600 dark:text-slate-300 group"
-          >
-            {isGoogleLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <GoogleIcon />}
-            {isGoogleLoading ? 'Signing in...' : 'Continue with Google'}
-          </Button>
-
-          <div className="relative">
-            <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 border-t border-slate-100" />
-            <div className="relative flex justify-center text-[10px] font-bold uppercase tracking-widest">
-              <span className="bg-white dark:bg-slate-900 px-4 text-slate-300">or sign in with email</span>
-            </div>
-          </div>
-
-          {loginError && (
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/50 text-red-600 dark:text-red-400 p-3 rounded-lg text-sm font-medium">
-              {loginError}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            <div className="space-y-4">
-              <Input
-                icon={<Mail className="h-4 w-4 text-slate-300" />}
-                placeholder="Email Address"
-                type="email"
-                {...register('email')}
-                error={errors.email?.message}
-                className="bg-slate-50 dark:bg-slate-800 border-none h-12 rounded-lg text-slate-900 dark:text-white placeholder:text-slate-300 font-medium"
-              />
-              <Input
-                icon={<Lock className="h-4 w-4 text-slate-300" />}
-                placeholder="Password"
-                type="password"
-                {...register('password')}
-                error={errors.password?.message}
-                className="bg-slate-50 dark:bg-slate-800 border-none h-12 rounded-lg text-slate-900 dark:text-white placeholder:text-slate-300 font-medium"
-              />
+        <Card className="border border-slate-200 dark:border-slate-800 shadow-2xl rounded-3xl overflow-hidden bg-white dark:bg-slate-900">
+          <CardContent className="p-10 space-y-8">
+            <div className="space-y-2 text-center">
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white">Sign In</h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Use your Google account to continue</p>
             </div>
 
             <Button
-              className="w-full h-16 rounded-lg text-base font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-50 group"
-              type="submit"
-              disabled={isSubmitting}
+              type="button"
+              onClick={() => onGoogleLogin()}
+              disabled={isGoogleLoading}
+              className="w-full h-16 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-100 dark:shadow-none transition-all font-bold text-lg flex items-center justify-center gap-4 group"
             >
-              {isSubmitting ? 'Signing in...' : (
-                <span className="flex items-center gap-2">
-                  Sign In <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                </span>
-              )}
+              {isGoogleLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : <div className="bg-white p-1.5 rounded-lg"><GoogleIcon /></div>}
+              {isGoogleLoading ? 'Connecting...' : 'Continue with Google'}
             </Button>
-          </form>
-        </CardContent>
-      </Card>
 
-      <div className="mt-10 text-center text-sm font-medium text-slate-500 dark:text-slate-400">
-        Don't have an account?{' '}
-        <Link to="/register" className="text-indigo-600 font-bold hover:text-indigo-700 transition-colors">
-          Sign Up
-        </Link>
-      </div>
-    </motion.div>
+            <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
+              <p className="text-center text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-relaxed">
+                Safe & Secure Authentication via Google OAuth
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <p className="mt-8 text-center text-xs text-slate-400 font-medium px-4">
+          By continuing, you agree to our <span className="text-indigo-600 font-bold cursor-pointer">Terms of Service</span> and <span className="text-indigo-600 font-bold cursor-pointer">Privacy Policy</span>.
+        </p>
+      </motion.div>
+    </div>
   );
 };

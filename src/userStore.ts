@@ -6,8 +6,6 @@ interface UserState {
   user: UserProfile | null;
   isAuthenticated: boolean;
   allUsers: (UserProfile & { password?: string })[];
-  login: (email: string, password?: string) => boolean;
-  registerUser: (userData: any) => boolean;
   syncGoogleUser: (userInfo: any) => void;
   logout: () => void;
   addXp: (amount: number) => void;
@@ -16,12 +14,6 @@ interface UserState {
   clearAllUsers: () => void;
 }
 
-const splitFullName = (fullName: string) => {
-  const parts = fullName.trim().split(' ');
-  const firstName = parts[0] || 'User';
-  const lastName = parts.slice(1).join(' ') || '';
-  return { firstName, lastName };
-};
 
 export const useUserStore = create<UserState>()(
   persist(
@@ -29,60 +21,6 @@ export const useUserStore = create<UserState>()(
       user: null,
       isAuthenticated: false,
       allUsers: [],
-
-      login: (email, password) => {
-        const state = get();
-        const existingUser = state.allUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
-
-        if (existingUser && (!existingUser.password || existingUser.password === password)) {
-          set({
-            user: existingUser,
-            isAuthenticated: true
-          });
-          return true;
-        }
-        return false;
-      },
-
-      registerUser: (userData) => {
-        const state = get();
-        const existingUser = state.allUsers.find(u => u.email.toLowerCase() === userData.email.toLowerCase());
-
-        if (existingUser) {
-          return false; // User already exists
-        }
-
-        let firstName = userData.firstName || 'User';
-        let lastName = userData.lastName || '';
-
-        if (userData.name && !userData.firstName) {
-          const split = splitFullName(userData.name);
-          firstName = split.firstName;
-          lastName = split.lastName;
-        }
-
-        const newUser: UserProfile & { password?: string } = {
-          id: userData.id || Date.now().toString(),
-          firstName,
-          lastName,
-          email: userData.email,
-          password: userData.password,
-          picture: userData.picture,
-          xp: userData.xp || 0,
-          streak: userData.streak || 0,
-          currentLevel: (userData.currentLevel || userData.level || 'A1') as KnowledgeLevel,
-          topicProgress: userData.topicProgress || [],
-          joinDate: new Date().toISOString()
-        };
-
-        set((state) => ({
-          allUsers: [...state.allUsers, newUser],
-          user: newUser,
-          isAuthenticated: true
-        }));
-
-        return true;
-      },
 
       syncGoogleUser: (userInfo) => {
         set((state) => {
