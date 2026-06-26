@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8b5cf6" />
+      <stop offset="100%" stop-color="#4f46e5" />
+    </linearGradient>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.2"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#shadow)">
+    <!-- Book Base (Purple) -->
+    <path d="M 24 12 H 100 A 6 6 0 0 1 106 18 V 102 A 6 6 0 0 1 100 108 H 24 A 16 16 0 0 1 8 92 V 28 A 16 16 0 0 1 24 12 Z" fill="url(#bg)" />
+
+    <!-- Pages (White Cutout) -->
+    <path d="M 30 84 H 106 V 98 H 30 A 7 7 0 0 1 30 84 Z" fill="white" />
+    
+    <!-- Big White 'E' -->
+    <path d="M 36 22 H 80 V 32 H 48 V 42 H 74 V 52 H 48 V 62 H 80 V 72 H 36 Z" fill="white" />
+  </g>
+</svg>

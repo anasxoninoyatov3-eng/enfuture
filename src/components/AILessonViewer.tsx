@@ -16,7 +16,8 @@ import {
   Globe,
   Volume2,
   VolumeX,
-  ThumbsDown
+  ThumbsDown,
+  Loader2
 } from 'lucide-react';
 
 import { cn, speakText } from '@/utils';
@@ -32,6 +33,7 @@ interface AILessonViewerProps {
   onFeedback?: () => void;
   onStartQuiz?: () => void;
   quizReady?: boolean;
+  isLoading?: boolean;
 }
 
 type Theme = 'modern' | 'paper' | 'midnight';
@@ -44,6 +46,7 @@ export const AILessonViewer: React.FC<AILessonViewerProps> = ({
   onFeedback,
   onStartQuiz,
   quizReady = false,
+  isLoading = false,
 }) => {
   const [theme, setTheme] = useState<Theme>('modern');
   const [activeSection, setActiveSection] = useState(0);
@@ -106,7 +109,26 @@ export const AILessonViewer: React.FC<AILessonViewerProps> = ({
   };
 
   return (
-    <div className={cn("min-h-[100vh] w-full h-full transition-colors duration-500 overflow-hidden flex flex-col", currentTheme.bg)}>
+    <div className={cn("min-h-[100vh] w-full h-full transition-colors duration-500 overflow-hidden flex flex-col relative", currentTheme.bg)}>
+
+      {/* Loading Overlay */}
+      <AnimatePresence>
+        {isLoading && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 z-[100] bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm flex flex-col items-center justify-center pointer-events-auto"
+          >
+            <div className="h-20 w-20 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl flex items-center justify-center border border-slate-200 dark:border-slate-700">
+               <Loader2 className="h-10 w-10 text-indigo-600 animate-spin" />
+            </div>
+            <p className="mt-6 font-bold text-lg text-slate-800 dark:text-white">
+              {language === 'RU' ? 'Загрузка...' : 'Yuklanmoqda...'}
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Viewer Header */}
       <div className={cn("px-6 py-4 border-b flex items-center justify-between sticky top-0 z-10 backdrop-blur-md", currentTheme.card)}>

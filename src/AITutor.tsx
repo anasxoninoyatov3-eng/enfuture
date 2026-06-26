@@ -268,6 +268,7 @@ Return ONLY valid JSON.`;
               }}
               onStartQuiz={preloadedQuiz ? handleStartPreloadedQuiz : undefined}
               quizReady={!!preloadedQuiz}
+              isLoading={loading}
             />
           </motion.div>
         ) : (

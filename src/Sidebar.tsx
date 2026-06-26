@@ -29,11 +29,9 @@ export const Sidebar = () => {
 
   const SidebarContent = (
     <div className="flex h-full flex-col">
-      <div className={cn("flex items-center mb-16 w-full", isSidebarCollapsed ? "justify-center px-0" : "justify-between px-2")}>
-        <div className="flex items-center gap-3 px-2">
-          <div className="h-8 w-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold text-xs">
-            E
-          </div>
+      <div className={cn("flex mb-16 w-full transition-all duration-300", isSidebarCollapsed ? "flex-col items-center gap-6 px-0" : "flex-row items-center justify-between px-2")}>
+        <div className={cn("flex items-center gap-3", isSidebarCollapsed ? "justify-center w-full" : "px-2")}>
+          <img src="/favicon.svg?v=6" alt="Logo" className="h-9 w-9 object-contain" />
           {(!isSidebarCollapsed || isMobileMenuOpen) && (
             <span className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">ENK English</span>
           )}
@@ -42,7 +40,7 @@ export const Sidebar = () => {
         {!isMobileMenuOpen && (
           <button
             onClick={toggleSidebar}
-            className="hidden md:flex h-10 w-10 rounded-xl border border-slate-100 dark:border-slate-800 items-center justify-center text-slate-300 dark:text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+            className="hidden md:flex h-10 w-10 shrink-0 rounded-xl border border-slate-100 dark:border-slate-800 items-center justify-center text-slate-300 dark:text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
           >
             {isSidebarCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
           </button>
