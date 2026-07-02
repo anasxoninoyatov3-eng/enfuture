@@ -11,11 +11,21 @@ interface PendingRegistration {
   expiresAt: number;
 }
 
+interface AuditLog {
+  id: string;
+  type: 'login' | 'register';
+  email: string;
+  name: string;
+  timestamp: string;
+}
+
 interface UserState {
   user: UserProfile | null;
   isAuthenticated: boolean;
   allUsers: (UserProfile & { password?: string })[];
   pendingRegistration: PendingRegistration | null;
+  auditLogs: AuditLog[];
+
 
   // Auth
   syncGoogleUser: (userInfo: any) => void;
@@ -41,6 +51,8 @@ export const useUserStore = create<UserState>()(
       isAuthenticated: false,
       allUsers: [],
       pendingRegistration: null,
+      auditLogs: [],
+
 
       syncGoogleUser: (userInfo) => {
         set((state) => {
@@ -100,6 +112,25 @@ export const useUserStore = create<UserState>()(
           pendingRegistration: { firstName, lastName, email, level, otp, expiresAt }
         });
 
+        // EmailJS or your real API logic to send OTP to the user's email
+        // Make sure to replace YOUR_SERVICE_ID, YOUR_TEMPLATE_ID, YOUR_PUBLIC_KEY
+        try {
+          fetch('https://api.emailjs.com/api/v1.0/email/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              service_id: 'default_service',
+              template_id: 'template_otp', // Replace with your template ID
+              user_id: 'YOUR_PUBLIC_KEY', // Replace with your public key
+              template_params: {
+                to_email: email,
+                to_name: `${firstName} ${lastName}`,
+                message: `Sizning tasdiqlash kodingiz (OTP): ${otp}`
+              }
+            })
+          }).catch(err => console.error("EmailJS error (ignore if not setup):", err));
+        } catch (e) { }
+
         console.log(`📧 OTP for ${email}: ${otp}`); // For dev/demo
         return { success: true, message: 'OTP yuborildi', otp };
       },
@@ -133,11 +164,20 @@ export const useUserStore = create<UserState>()(
           joinDate: new Date().toISOString()
         };
 
+        const newAudit: AuditLog = {
+          id: Date.now().toString() + Math.random(),
+          type: 'register',
+          email: pending.email,
+          name: `${pending.firstName} ${pending.lastName}`,
+          timestamp: new Date().toISOString()
+        };
+
         set((state) => ({
           allUsers: [...state.allUsers, newUser],
           user: newUser,
           isAuthenticated: true,
-          pendingRegistration: null
+          pendingRegistration: null,
+          auditLogs: [newAudit, ...state.auditLogs]
         }));
 
         return { success: true, message: 'Muvaffaqiyatli ro\'yxatdan o\'tdingiz!' };
@@ -165,6 +205,23 @@ export const useUserStore = create<UserState>()(
           }
         });
 
+        try {
+          fetch('https://api.emailjs.com/api/v1.0/email/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              service_id: 'default_service',
+              template_id: 'template_otp', // Replace with your template ID
+              user_id: 'YOUR_PUBLIC_KEY', // Replace with your public key
+              template_params: {
+                to_email: email,
+                to_name: `${existingUser.firstName} ${existingUser.lastName}`,
+                message: `Sizning tizimga kirish kodingiz (OTP): ${otp}`
+              }
+            })
+          }).catch(err => console.error("EmailJS error (ignore if not setup):", err));
+        } catch (e) { }
+
         console.log(`📧 Login OTP for ${email}: ${otp}`);
         return { success: true, message: 'OTP yuborildi', otp };
       },
@@ -189,7 +246,20 @@ export const useUserStore = create<UserState>()(
         const user = state.allUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
         if (!user) return { success: false, message: 'Foydalanuvchi topilmadi' };
 
-        set({ user, isAuthenticated: true, pendingRegistration: null });
+        const newAudit: AuditLog = {
+          id: Date.now().toString() + Math.random(),
+          type: 'login',
+          email: user.email,
+          name: `${user.firstName} ${user.lastName}`,
+          timestamp: new Date().toISOString()
+        };
+
+        set((state) => ({ 
+          user, 
+          isAuthenticated: true, 
+          pendingRegistration: null,
+          auditLogs: [newAudit, ...state.auditLogs]
+        }));
         return { success: true, message: 'Muvaffaqiyatli kirdingiz!' };
       },
 

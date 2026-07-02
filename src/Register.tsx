@@ -27,7 +27,6 @@ export const RegisterPage = () => {
   const [selectedLevel, setSelectedLevel] = useState<KnowledgeLevel>('A1');
   const [levelOpen, setLevelOpen] = useState(false);
   const [otp, setOtp] = useState('');
-  const [devOtp, setDevOtp] = useState(''); // for demo
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -54,7 +53,6 @@ export const RegisterPage = () => {
       return;
     }
 
-    if (result.otp) setDevOtp(result.otp); // demo only
     setStep('otp');
   };
 
@@ -100,13 +98,12 @@ export const RegisterPage = () => {
             {(['info', 'otp'] as Step[]).map((s, i) => (
               <div
                 key={s}
-                className={`flex-1 py-3 text-xs font-bold text-center uppercase tracking-widest transition-all ${
-                  step === s
-                    ? 'bg-indigo-600 text-white'
-                    : i < (['info', 'otp'] as Step[]).indexOf(step)
+                className={`flex-1 py-3 text-xs font-bold text-center uppercase tracking-widest transition-all ${step === s
+                  ? 'bg-indigo-600 text-white'
+                  : i < (['info', 'otp'] as Step[]).indexOf(step)
                     ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600'
                     : 'text-slate-300 dark:text-slate-600'
-                }`}
+                  }`}
               >
                 {i + 1}. {s === 'info' ? 'Ma\'lumotlar' : 'Tasdiqlash'}
               </div>
@@ -199,9 +196,8 @@ export const RegisterPage = () => {
                                 key={lv.value}
                                 type="button"
                                 onClick={() => { setSelectedLevel(lv.value); setLevelOpen(false); }}
-                                className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-all hover:bg-indigo-50 dark:hover:bg-indigo-900/20 ${
-                                  selectedLevel === lv.value ? 'bg-indigo-50 dark:bg-indigo-900/20' : ''
-                                }`}
+                                className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-all hover:bg-indigo-50 dark:hover:bg-indigo-900/20 ${selectedLevel === lv.value ? 'bg-indigo-50 dark:bg-indigo-900/20' : ''
+                                  }`}
                               >
                                 <span className="text-xl">{lv.emoji}</span>
                                 <div>
@@ -266,13 +262,6 @@ export const RegisterPage = () => {
                     <p className="text-sm text-slate-500 dark:text-slate-400">
                       <span className="font-bold text-slate-700 dark:text-slate-300">{email}</span> manziliga 6 xonali kod yuborildi
                     </p>
-                    {devOtp && (
-                      <div className="mt-3 px-4 py-2 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-700">
-                        <p className="text-xs text-amber-700 dark:text-amber-400 font-medium">
-                          🔧 Demo rejimi — OTP: <span className="font-black text-amber-800 dark:text-amber-300 text-base">{devOtp}</span>
-                        </p>
-                      </div>
-                    )}
                   </div>
 
                   {/* OTP inputs */}

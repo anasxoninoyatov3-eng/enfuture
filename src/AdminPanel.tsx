@@ -1,12 +1,14 @@
 import { motion } from 'framer-motion';
 import { Card } from '@/Card';
-import { Shield, Users, Activity, Search, Filter, Trash2 } from 'lucide-react';
+import { Shield, Activity, Search, Trash2, Clock, MapPin } from 'lucide-react';
 import { useUserStore } from '@/userStore';
 import { Navigate } from 'react-router-dom';
 import { useState } from 'react';
+import { cn } from '@/utils';
+
 
 export const AdminPanel = () => {
-  const { user, allUsers } = useUserStore();
+  const { user, auditLogs } = useUserStore();
   const [searchQuery, setSearchQuery] = useState('');
 
   // Check for admin email (dinoyatova21@gmail.com)
@@ -14,10 +16,9 @@ export const AdminPanel = () => {
     return <Navigate to="/dashboard" replace />;
   }
 
-  const filteredUsers = allUsers.filter(u =>
-    u.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    u.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    u.email.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredLogs = (auditLogs || []).filter(log =>
+    log.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    log.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -30,48 +31,33 @@ export const AdminPanel = () => {
         <div className="space-y-1">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-50 border border-rose-100 text-[10px] font-bold text-rose-600 uppercase tracking-widest">
             <Shield className="h-3 w-3" />
-            Admin Authority
+            Admin Authority - admin.enfuture.uz
           </div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Platform Administration</h1>
-          <p className="text-slate-500 dark:text-slate-400 font-medium">Manage users, monitor activity, and configure system settings.</p>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Saytga Kirganlar Auditi</h1>
+          <p className="text-slate-500 dark:text-slate-400 font-medium">Faqat ushbu saytga yo'naltirilgan va kirgan foydalanuvchilar haqida hisobot.</p>
         </div>
       </motion.div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <Card className="p-6 border-slate-200 dark:border-slate-800 shadow-sm rounded-2xl bg-white dark:bg-slate-900 flex items-center gap-4">
           <div className="h-14 w-14 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
-            <Users className="h-6 w-6" />
+            <Activity className="h-6 w-6" />
           </div>
           <div>
-            <p className="text-sm font-bold text-slate-400 uppercase tracking-wider">Total Users</p>
-            <h3 className="text-3xl font-black text-slate-900 dark:text-white">{allUsers.length}</h3>
+            <p className="text-sm font-bold text-slate-400 uppercase tracking-wider">Jami Kirishlar</p>
+            <h3 className="text-3xl font-black text-slate-900 dark:text-white">{(auditLogs || []).length}</h3>
           </div>
         </Card>
 
         <Card className="p-6 border-slate-200 dark:border-slate-800 shadow-sm rounded-2xl bg-white dark:bg-slate-900 flex items-center gap-4">
           <div className="h-14 w-14 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
-            <Activity className="h-6 w-6" />
+            <Clock className="h-6 w-6" />
           </div>
           <div>
-            <p className="text-sm font-bold text-slate-400 uppercase tracking-wider">Active (Today)</p>
+            <p className="text-sm font-bold text-slate-400 uppercase tracking-wider">Oxirgi 24 soatda</p>
             <h3 className="text-3xl font-black text-slate-900 dark:text-white">
-              {allUsers.filter(u => {
-                const lastStudied = u.topicProgress.find(p => p.lastStudied);
-                if (!lastStudied?.lastStudied) return false;
-                const today = new Date().toDateString();
-                return new Date(lastStudied.lastStudied).toDateString() === today;
-              }).length}
+              {(auditLogs || []).filter(l => new Date(l.timestamp).getTime() > Date.now() - 24 * 60 * 60 * 1000).length}
             </h3>
-          </div>
-        </Card>
-
-        <Card className="p-6 border-slate-200 dark:border-slate-800 shadow-sm rounded-2xl bg-white dark:bg-slate-900 flex items-center gap-4">
-          <div className="h-14 w-14 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600">
-            <Shield className="h-6 w-6" />
-          </div>
-          <div>
-            <p className="text-sm font-bold text-slate-400 uppercase tracking-wider">Admins</p>
-            <h3 className="text-3xl font-black text-slate-900 dark:text-white">1</h3>
           </div>
         </Card>
       </div>
@@ -79,8 +65,8 @@ export const AdminPanel = () => {
       <Card className="border-slate-200 dark:border-slate-800 shadow-sm rounded-2xl bg-white dark:bg-slate-900 overflow-hidden">
         <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Users Information</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">All registered users across the platform.</p>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Audit Loglari</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Faqat shu saytga kirgan va ro'yxatdan o'tganlar nazorati.</p>
           </div>
 
           <div className="flex items-center gap-3">
@@ -88,7 +74,7 @@ export const AdminPanel = () => {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <input
                 type="text"
-                placeholder="Search users..."
+                placeholder="Ism yoki email bo'yicha qidiruv..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full h-10 pl-10 pr-4 rounded-lg bg-slate-50 dark:bg-slate-800 border-none text-sm focus:ring-2 focus:ring-indigo-600 font-medium transition-all"
@@ -96,18 +82,15 @@ export const AdminPanel = () => {
             </div>
             <button 
               onClick={() => {
-                if(confirm("Haqiqatan ham barcha foydalanuvchi ma'lumotlarini o'chirib tashlamoqchimisiz? (Bu 'Abubakr Pioneer' kabi eski ma'lumotlarni tozalaydi)")) {
-                   useUserStore.getState().clearAllUsers();
+                if(confirm("Haqiqatan ham barcha audit ma'lumotlarini o'chirib tashlamoqchimisiz?")) {
+                  useUserStore.setState({ auditLogs: [] });
                 }
               }}
-              title="Clear All Legacy Data"
+              title="Auditni tozalash"
               className="h-10 px-4 rounded-lg bg-rose-50 dark:bg-rose-900/20 flex items-center justify-center text-rose-600 dark:text-rose-400 hover:bg-rose-100 transition-colors text-xs font-bold gap-2"
             >
               <Trash2 className="h-4 w-4" />
-              Reset All
-            </button>
-            <button className="h-10 w-10 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-white transition-colors">
-              <Filter className="h-4 w-4" />
+              Tozalash
             </button>
           </div>
         </div>
@@ -116,63 +99,53 @@ export const AdminPanel = () => {
           <table className="w-full whitespace-nowrap">
             <thead className="bg-slate-50 dark:bg-slate-800">
               <tr className="text-left text-xs font-bold text-slate-400 uppercase tracking-wider">
-                <th className="px-6 py-4 rounded-tl-2xl">User</th>
-                <th className="px-6 py-4">Level & XP</th>
-                <th className="px-6 py-4">Topics Mastered</th>
-                <th className="px-6 py-4">Join Date</th>
-                <th className="px-6 py-4 rounded-tr-2xl text-right">Actions</th>
+                <th className="px-6 py-4 rounded-tl-2xl">Foydalanuvchi</th>
+                <th className="px-6 py-4">Amal Turi</th>
+                <th className="px-6 py-4">Vaqti</th>
+                <th className="px-6 py-4">Joylashuv (IP)</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filteredUsers.length === 0 ? (
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 gap-y-1">
+              {filteredLogs.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-slate-400">
-                    No users found
+                  <td colSpan={4} className="px-6 py-12 text-center text-slate-400">
+                    Hech qanday audit log topilmadi.
                   </td>
                 </tr>
               ) : (
-                filteredUsers.map((u) => (
-                  <tr key={u.id} className="hover:bg-slate-50 dark:bg-slate-800/50 transition-colors">
+                filteredLogs.map((log) => (
+                  <tr key={log.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-4">
-                        <div className="h-10 w-10 rounded-full overflow-hidden bg-indigo-100 shrink-0 flex items-center justify-center">
-                          {u.picture ? (
-                            <img src={u.picture} alt={`${u.firstName} ${u.lastName}`} className="h-full w-full object-cover" />
-                          ) : (
-                            <span className="text-indigo-600 font-bold text-sm">
-                              {u.firstName[0]}{u.lastName[0] || ''}
-                            </span>
-                          )}
+                        <div className="h-10 w-10 rounded-full overflow-hidden bg-indigo-100 text-indigo-600 font-bold shrink-0 flex items-center justify-center">
+                          {log.name[0]}
                         </div>
                         <div>
-                          <div className="font-bold text-slate-900 dark:text-white">
-                            {u.firstName} {u.lastName}
-                          </div>
-                          <div className="text-sm text-slate-500 dark:text-slate-400">{u.email}</div>
+                          <div className="font-bold text-slate-900 dark:text-white">{log.name}</div>
+                          <div className="text-xs text-slate-500 dark:text-slate-400">{log.email}</div>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="flex flex-col">
-                        <span className="font-medium text-slate-900 dark:text-white">Level {u.currentLevel}</span>
-                        <span className="text-xs font-bold text-indigo-600">{u.xp} XP</span>
+                      <div className={cn("inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold", 
+                        log.type === 'login' ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-indigo-50 text-indigo-600 border border-indigo-100"
+                      )}>
+                        {log.type === 'login' ? 'Tizimga Kirdi' : "Ro'yxatdan o'tdi"}
                       </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
-                        <span className="font-medium text-slate-900 dark:text-white">
-                          {u.topicProgress.filter(p => p.mastered).length} / {u.topicProgress.length}
+                        <span className="font-medium text-slate-900 dark:text-white text-sm">
+                          {new Date(log.timestamp).toLocaleDateString('uz-UZ', { day: 'numeric', month: 'long', year: 'numeric' })}
                         </span>
-                        <span className="text-xs text-slate-400">Topics mastered</span>
+                        <span className="text-xs font-medium text-slate-500 flex items-center gap-1 mt-0.5">
+                           {new Date(log.timestamp).toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                        </span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm font-medium text-slate-600 dark:text-slate-300">
-                      {new Date(u.joinDate).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <button className="text-slate-400 hover:text-rose-500 p-2 rounded-lg hover:bg-slate-100 transition-colors">
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                    <td className="px-6 py-4 text-sm font-medium text-slate-500 flex items-center gap-2">
+                       <MapPin className="h-4 w-4 text-slate-400" />
+                       Tashkent, UZ <span className="text-xs text-slate-400 ml-1 opacity-0 group-hover:opacity-100 transition-opacity">(192.168.1.1)</span>
                     </td>
                   </tr>
                 ))
@@ -184,3 +157,4 @@ export const AdminPanel = () => {
     </div>
   );
 };
+

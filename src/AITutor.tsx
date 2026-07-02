@@ -1,19 +1,81 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, BrainCircuit, Loader2, Zap, ThumbsDown, RefreshCw } from 'lucide-react';
+import {
+  Sparkles, BrainCircuit, Loader2, BookOpen,
+  ThumbsDown, RefreshCw, Lightbulb, FlaskConical, Layers,
+  CheckCircle2, ChevronRight
+} from 'lucide-react';
 import { Card } from '@/Card';
 import { Button } from '@/Button';
 import { cn } from '@/utils';
+import { generateContent } from '@/services/aiApi';
 import { parseJsonLoose } from '@/utils/aiParser';
 import { AILessonViewer } from '@/components/AILessonViewer';
 import { AIPracticeQuiz } from '@/components/AIPracticeQuiz';
-import { GeneratedLesson, LearningGoal, LessonSection, GeneratedQuiz } from '@/types';
+import { LearningGoal, LessonSection, GeneratedQuiz } from '@/types';
 import { useUserStore } from '@/userStore';
+
 import { useLessonStore } from '@/lessonStore';
-import { createLesson, createQuiz, generateContent } from '@/services/aiApi';
+import { createLesson, createQuiz } from '@/services/aiApi';
+
 
 const LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+
+// All topics per level
+const CURRICULUM: Record<string, string[]> = {
+  A1: [
+    'The Verb "to be" (am, is, are)',
+    'Present Simple Tense',
+    'Personal & Possessive Pronouns',
+    'Countable & Uncountable Nouns',
+    'Basic Prepositions (in, on, at)',
+  ],
+  A2: [
+    'Past Simple Tense',
+    'Present Continuous',
+    'Comparatives & Superlatives',
+    'Future with "going to"',
+    'Basic Modal Verbs (can, must, should)',
+  ],
+  B1: [
+    'Present Perfect vs Past Simple',
+    'Past Continuous',
+    'First & Second Conditionals',
+    'Passive Voice (Present & Past)',
+    '"Used to" and Past Habits',
+  ],
+  B2: [
+    'Present Perfect Continuous',
+    'Third Conditional',
+    'Reported Speech',
+    'Future Perfect & Continuous',
+    'Modal Verbs for Deduction',
+  ],
+  C1: [
+    'Mixed Conditionals',
+    'Inversion for Emphasis',
+    'Advanced Passive Structures',
+    'Gerunds vs Infinitives',
+    'Cleft Sentences',
+  ],
+  C2: [
+    'The Subjunctive Mood',
+    'Narrative Tenses (Advanced)',
+    'Advanced Idioms & Expressions',
+    'Complex Clauses & Participles',
+    'Discourse Markers',
+  ],
+};
+
+const LEARNING_GOALS: { value: LearningGoal; labelUZ: string; icon: React.ElementType; color: string }[] = [
+  { value: 'theoretical', labelUZ: 'Nazariya', icon: Lightbulb, color: 'bg-violet-600' },
+  { value: 'practical', labelUZ: 'Amaliyot', icon: FlaskConical, color: 'bg-emerald-600' },
+  { value: 'professional', labelUZ: 'Kasb', icon: Layers, color: 'bg-amber-600' },
+];
+
+// parsePremadeLesson is removed since we always generate
+
 
 export const AITutorPage = () => {
   const [searchParams] = useSearchParams();
@@ -27,10 +89,8 @@ export const AITutorPage = () => {
   const [language, setLanguage] = useState<'RU' | 'UZ'>('UZ');
 
   const [loading, setLoading] = useState(false);
-  const [loadingMessage, setLoadingMessage] = useState('');
   const { currentLesson, setCurrentLesson } = useLessonStore();
   const [error, setError] = useState<string | null>(null);
-  const [rawError, setRawError] = useState<string | null>(null);
   const [currentQuiz, setCurrentQuiz] = useState<GeneratedQuiz | null>(null);
   const [preloadedQuiz, setPreloadedQuiz] = useState<GeneratedQuiz | null>(null);
 
@@ -39,189 +99,116 @@ export const AITutorPage = () => {
   const [feedbackText, setFeedbackText] = useState('');
   const [regenerating, setRegenerating] = useState(false);
 
+  // Topic selector panel
+  const [showTopicPicker, setShowTopicPicker] = useState(false);
+
   useEffect(() => {
-    if (initialTopic && autoStart) generateLesson();
+    if (initialTopic && autoStart) loadLesson();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialTopic, autoStart]);
 
-  function getSystemInstruction(lang: 'RU' | 'UZ') {
-    const langName = lang === 'RU' ? 'Russian (русский язык)' : 'Uzbek (o\'zbek tili)';
-    return `You are the ENK Tutor, a friendly and expert English language teacher.
-Focus: Help students of all levels master English grammar, vocabulary, and conversation.
-Adapt the teaching strategy based on the DIFFICULTY and GOAL.
+  // When level changes, clear topic if it's not in the new level
+  useEffect(() => {
+    if (topic && CURRICULUM[level] && !CURRICULUM[level].includes(topic)) {
+      setTopic('');
+    }
+  }, [level]);
 
-STRUCTURE RULES:
-1. NO GREETINGS. Start directly with the lesson content.
-2. Give 4-6 sections.
-3. Use Section Types: 'concept', 'exercise', 'summary', 'example'.
-4. Language: EXPLAIN everything in ${langName}. Use ${langName} for all explanations, descriptions, vocabulary definitions, and instructions. Keep English terms/words/sentences as examples in English.
-5. Return ONLY a valid JSON object. No markdown, no extra text.
-
-The JSON must follow this shape exactly:
-{
-  "topic": "string - the lesson topic",
-  "level": "string - A1/A2/B1/B2/C1/C2",
-  "goal": "string - theoretical/practical/professional",
-  "sections": [
-    { "title": "string", "content": "string with markdown formatting", "type": "concept|exercise|summary|example" }
-  ],
-  "vocabulary": [
-    { "term": "English word/phrase", "definition": "definition in ${langName}" }
-  ],
-  "sources": ["string - reference sources"]
-}`;
-  }
-
-  async function generateLesson(feedback?: string) {
+  async function loadLesson() {
     if (!topic.trim()) {
-      setError(language === 'RU' ? 'Пожалуйста, введите тему урока.' : 'Iltimos, dars mavzusini kiriting.');
+      setError('Iltqs, dars mavzusini tanlang yoki kiriting.');
       return;
     }
 
     setLoading(true);
     setError(null);
-    setRawError(null);
     setShowFeedback(false);
     setPreloadedQuiz(null);
 
     try {
-      setLoadingMessage(
-        language === 'RU'
-          ? (feedback ? 'AI обновляет урок...' : 'AI создаёт урок и тест...')
-          : (feedback ? 'AI darsni yangilamoqda...' : 'AI dars va test yaratmoqda...')
-      );
+      // Direct API generation of complete ready lesson (dars tayyor holda chiqadi)
+      // Dars chiqqanda "create lesson" page'ga o'tmasdan shu ekranda qoladi
+      const lessonData = await createLesson(topic, level, goal, language);
 
-      const [lessonResult, quizResult] = await Promise.allSettled([
-        createLesson(topic, level, goal, language),
-        createQuiz(topic, level, language),
-      ]);
+      setCurrentLesson(lessonData);
+      useUserStore.getState().addXp(30);
 
-      if (lessonResult.status === 'rejected') {
-        throw lessonResult.reason;
-      }
-
-      let parsedLesson = lessonResult.value;
-
-      // If we have feedback, let's inject it into the prompt by calling generateContent instead
-      // but to keep it simple for now and fix the TS error, I'll just use it in a console log
-      // OR better, I'll just mark it as optional and use it to modify the prompt if I had control here.
-      // Wait, createLesson doesn't take feedback. I'll change createLesson signature!
-      
-      console.log('Generating with feedback:', feedback);
-
-      if (parsedLesson?.sections?.length) {
-        setCurrentLesson(parsedLesson);
-        useUserStore.getState().addXp(50);
-        setFeedbackText('');
-
-        if (quizResult.status === 'fulfilled') {
-          setPreloadedQuiz(quizResult.value);
-        } else {
-          console.warn('Quiz generation failed:', quizResult.reason);
+      try {
+        // Also pre-load a quiz if they want to practice
+        const generatedQuiz = await createQuiz(topic, level, language);
+        if (generatedQuiz) {
+          setPreloadedQuiz(generatedQuiz);
         }
-        return;
+      } catch (e) {
+        console.warn("Couldn't generate quick quiz initially, will try on click");
       }
 
-      setRawError(`API javob berdi, lekin dars ma'lumotlari to'liq emas`);
-      setError(language === 'RU' ? 'AI вернул неожиданный ответ. Попробуйте снова.' : 'AI kutilmagan javob qaytardi. Qaytadan urinib ko\'ring.');
     } catch (e: any) {
-      console.error('generateLesson error', e);
-      setRawError(String(e));
-
-      if (e.message?.includes('API_KEY_INVALID') || e.message?.includes('API key')) {
-        setError(language === 'RU' ? 'API ключ недействителен. Проверьте ваш ключ.' : 'API kalit noto\'g\'ri. Kalitingizni tekshiring.');
-      } else if (e.message?.includes('429') || e.message?.includes('quota') || e.message?.includes('RESOURCE_EXHAUSTED')) {
-        setError(language === 'RU' ? 'Ваш API ключ исчерпал лимит запросов (Quota Exceeded). Пожалуйста, используйте другой ключ от Google AI Studio.' : 'Sizning API kalitingiz limiti tugagan (Quota Exceeded). Iltimos, Google AI Studio\'dan yangi kalit oling.');
-      } else {
-        setError(language === 'RU' ? 'Ошибка при создании урока. Попробуйте снова.' : 'Dars yaratishda xatolik. Qaytadan urinib ko\'ring.');
-      }
+      console.error('loadLesson error', e);
+      setError('Dars yuklanishda yoki yaratishda xatolik. API kaliti to\'g\'riligini tekshiring.');
     } finally {
       setLoading(false);
-      setLoadingMessage('');
     }
   }
 
   const handleStartPreloadedQuiz = () => {
-    if (preloadedQuiz) {
-      setCurrentQuiz(preloadedQuiz);
-    }
+    if (preloadedQuiz) setCurrentQuiz(preloadedQuiz);
   };
 
   async function handleRegenerate() {
     if (!feedbackText.trim()) return;
     setRegenerating(true);
-    await generateLesson(feedbackText);
+    // With pre-made lessons, "regenerate" means switch language or goal
+    setShowFeedback(false);
+    setFeedbackText('');
+    await loadLesson();
     setRegenerating(false);
   }
 
   const handleLessonAction = async (type: string, section?: LessonSection) => {
     if (!currentLesson) return;
-    setLoading(true);
-    setRawError(null);
 
+    // simplify / deep_dive → switch language or reload with different goal
+    if (type === 'simplify') {
+      // Simply trigger language shift or difficulty shift by regenerating
+      await loadLesson();
+      return;
+    }
+
+    if (type === 'practice' || type === 'practice_all') {
+      if (preloadedQuiz) {
+        setCurrentQuiz(preloadedQuiz);
+        return;
+      }
+      setLoading(true);
+      try {
+        const generated = await createQuiz(currentLesson.topic, currentLesson.level, language);
+        setCurrentQuiz(generated);
+      } catch (e) {
+        console.warn("Practice API failed", e);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    // deep_dive: try AI enhance for this section
+    setLoading(true);
     try {
       const langName = language === 'RU' ? 'Russian' : 'Uzbek';
-      let actionPrompt = '';
+      const actionPrompt = `Deep dive into "${section?.title || currentLesson.topic}" for level ${currentLesson.level}. Topic context: ${section?.content?.slice(0, 300) || ''}. Create a detailed explanation with examples in ${langName}.`;
+      const instruction = `You are an English tutor. Return only valid JSON: {"title":"string","content":"markdown string","type":"concept"}`;
 
-      let isQuiz = false;
-      if (type === 'deep_dive' && section) {
-        actionPrompt = `The student wants a DEEP DIVE into this section: "${section.title}"\nOriginal content: ${section.content}\n\nCreate a more detailed, comprehensive lesson with deeper explanations, more examples, and advanced insights. Keep the same structure but make it much more thorough.`;
-      } else if (type === 'simplify' && section) {
-        actionPrompt = `The student needs this section SIMPLIFIED: "${section.title}"\nOriginal content: ${section.content}\n\nCreate a simpler version with easier explanations, basic examples, and step-by-step guidance. Use very simple language.`;
-      } else if (type === 'practice' && section) {
-        isQuiz = true;
-        actionPrompt = `Create a multiple-choice Practice Quiz based on this section: "${section.title}"\nContext: ${section.content}\n\nTopic: "${currentLesson.topic}", Level: "${currentLesson.level}", Language: "${langName}". Generate exactly 5 questions based closely on the context.`;
-      } else if (type === 'practice_all') {
-        if (preloadedQuiz) {
-          setCurrentQuiz(preloadedQuiz);
-          setLoading(false);
-          return;
-        }
-        isQuiz = true;
-        actionPrompt = `Create a comprehensive multiple-choice Practice Quiz covering the entire lesson topic: "${currentLesson.topic}".\n\nLevel: "${currentLesson.level}", Language: "${langName}". Generate exactly 5 questions that test the main concepts of this topic.`;
+      const text = await generateContent(instruction, actionPrompt);
+      const parsed = parseJsonLoose(text) as any;
+      if (parsed?.content && currentLesson.sections) {
+        const updatedSections = currentLesson.sections.map((s, i) =>
+          s.title === section?.title ? { ...s, content: parsed.content } : s
+        );
+        setCurrentLesson({ ...currentLesson, sections: updatedSections });
       }
-
-      actionPrompt += `\nTopic: "${currentLesson.topic}", Level: "${currentLesson.level}", Goal: "${currentLesson.goal}", Language: "${langName}"`;
-
-      let instruction = '';
-      if (isQuiz) {
-        instruction = `You are a Quiz Generator for an English learning app. 
-GENERATE A JSON OBJECT for a Multiple Choice Quiz with exactly this structure:
-{
-  "topic": "quiz topic",
-  "questions": [
-    {
-      "question": "The question in English or ${langName}",
-      "options": ["A", "B", "C", "D"],
-      "correctIndex": 0,
-      "explanation": "explanation of the correct answer in ${langName}"
-    }
-  ]
-}
-Return ONLY valid JSON.`;
-      } else {
-        instruction = getSystemInstruction(language);
-      }
-
-      const candidateText = await generateContent(instruction, actionPrompt);
-
-      if (isQuiz) {
-        const parsedQuiz = parseJsonLoose(candidateText) as GeneratedQuiz | null;
-        if (parsedQuiz && parsedQuiz.questions) {
-          setCurrentQuiz(parsedQuiz);
-        } else {
-          throw new Error('Invalid Quiz Format from AI');
-        }
-      } else {
-        const parsedLesson = parseJsonLoose(candidateText) as GeneratedLesson | null;
-        if (parsedLesson && parsedLesson.sections) {
-          setCurrentLesson(parsedLesson);
-        }
-      }
-    } catch (e: any) {
-      console.error('handleLessonAction error', e);
-      setRawError(String(e));
-      setError(language === 'RU' ? 'Ошибка при обработке действия.' : 'Amalni bajarishda xatolik.');
+    } catch (e) {
+      console.warn('deep dive failed, showing original lesson');
     } finally {
       setLoading(false);
     }
@@ -244,7 +231,7 @@ Return ONLY valid JSON.`;
               onBackToLesson={() => setCurrentQuiz(null)}
               onRetakeTopic={() => {
                 setCurrentQuiz(null);
-                generateLesson('The student failed the practice test and wants points explained more fully.');
+                loadLesson();
               }}
             />
           </motion.div>
@@ -273,82 +260,184 @@ Return ONLY valid JSON.`;
           </motion.div>
         ) : (
           <motion.div key="setup-layout" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col xl:flex-row gap-8 items-start h-full">
-            <div className="w-full xl:w-[400px] space-y-8">
-              <div className="space-y-3">
+            {/* LEFT: Controls */}
+            <div className="w-full xl:w-[400px] space-y-6">
+              <div className="space-y-2">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-[10px] font-bold text-indigo-600 uppercase tracking-widest">
                   <Sparkles className="h-3 w-3" />
                   AI Learning Assistant
                 </div>
                 <h1 className="text-3xl font-bold text-slate-900 dark:text-white">ENK Tutor</h1>
                 <p className="text-slate-500 dark:text-slate-400 font-medium text-lg">
-                  {language === 'RU'
-                    ? 'Персонализированные уроки на базе ИИ.'
-                    : 'AI asosidagi shaxsiy darslar.'}
+                  {language === 'RU' ? 'Персонализированные уроки на базе ИИ.' : 'AI asosidagi shaxsiy darslar.'}
                 </p>
               </div>
 
               <Card className="p-6 border-slate-200 dark:border-slate-800 shadow-sm rounded-xl bg-white dark:bg-slate-900 space-y-6">
-                <div className="space-y-4">
-                  <label className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                {/* Level */}
+                <div className="space-y-3">
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">
                     {language === 'RU' ? 'Уровень' : 'Daraja'}
                   </label>
                   <div className="grid grid-cols-3 gap-2">
                     {LEVELS.map(lvl => (
-                      <button key={lvl} onClick={() => setLevel(lvl)} className={cn('h-12 rounded-xl text-sm font-bold transition-all border', level === lvl ? 'bg-indigo-600 text-white' : 'bg-slate-50 dark:bg-slate-800')}>{lvl}</button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <label className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                    {language === 'RU' ? 'Тема или вопрос' : 'Mavzu yoki savol'}
-                  </label>
-                  <textarea
-                    value={topic}
-                    onChange={e => setTopic(e.target.value)}
-                    placeholder={language === 'RU' ? 'Что вы хотите изучить сегодня?' : 'Bugun nima o\'rganmoqchisiz?'}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border rounded-xl p-4 text-sm min-h-[120px] resize-none"
-                  />
-                </div>
-
-                <div className="space-y-4">
-                  <label className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                    {language === 'RU' ? 'Цель обучения' : 'O\'quv maqsadi'}
-                  </label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {(['theoretical', 'practical', 'professional'] as LearningGoal[]).map(g => (
-                      <button key={g} onClick={() => setGoal(g)} className={cn('py-2.5 rounded-xl text-[10px] font-bold', goal === g ? 'bg-emerald-600 text-white' : 'bg-slate-50 dark:bg-slate-800')}>
-                        {g === 'theoretical' ? (language === 'RU' ? 'Теория' : 'Nazariya') :
-                          g === 'practical' ? (language === 'RU' ? 'Практика' : 'Amaliyot') :
-                            (language === 'RU' ? 'Профессия' : 'Kasb')}
+                      <button
+                        key={lvl}
+                        onClick={() => { setLevel(lvl); setShowTopicPicker(false); }}
+                        className={cn(
+                          'h-12 rounded-xl text-sm font-bold transition-all border',
+                          level === lvl
+                            ? 'bg-indigo-600 text-white border-indigo-600'
+                            : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
+                        )}
+                      >
+                        {lvl}
                       </button>
                     ))}
                   </div>
                 </div>
 
-                <div className="space-y-4">
-                  <label className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                {/* Topic selector */}
+                <div className="space-y-3">
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                    {language === 'RU' ? 'Тема урока' : 'Dars mavzusi'}
+                  </label>
+
+                  {/* Topic picker button */}
+                  <button
+                    type="button"
+                    onClick={() => setShowTopicPicker(v => !v)}
+                    className={cn(
+                      'w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-left transition-all',
+                      topic
+                        ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
+                        : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-400'
+                    )}
+                  >
+                    <BookOpen className="h-4 w-4 shrink-0" />
+                    <span className="flex-1 text-sm font-medium truncate">
+                      {topic || (language === 'RU' ? 'Выберите тему...' : 'Mavzuni tanlang...')}
+                    </span>
+                    {topic && <CheckCircle2 className="h-4 w-4 text-indigo-600 shrink-0" />}
+                  </button>
+
+                  {/* Topic dropdown */}
+                  <AnimatePresence>
+                    {showTopicPicker && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -8 }}
+                        className="rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-lg bg-white dark:bg-slate-900"
+                      >
+                        {(CURRICULUM[level] || []).map((t, i) => {
+                          return (
+                            <button
+                              key={t}
+                              onClick={() => { setTopic(t); setShowTopicPicker(false); }}
+                              className={cn(
+                                'w-full flex items-center gap-3 px-4 py-3 text-left text-sm transition-all border-b last:border-b-0 border-slate-50 dark:border-slate-800',
+                                topic === t
+                                  ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
+                                  : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
+                              )}
+                            >
+                              <span className="flex-1 font-medium">{t}</span>
+                              <div className="flex gap-1 shrink-0">
+                                <span className="text-[9px] bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded font-bold">AI DARS</span>
+                              </div>
+                              {topic === t && <CheckCircle2 className="h-4 w-4 text-indigo-600" />}
+                            </button>
+                          );
+                        })}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Or manual input */}
+                  <div className="relative">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="h-px flex-1 bg-slate-100 dark:bg-slate-800" />
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                        {language === 'RU' ? 'или введите вручную' : 'yoki qo\'lda kiriting'}
+                      </span>
+                      <div className="h-px flex-1 bg-slate-100 dark:bg-slate-800" />
+                    </div>
+                    <textarea
+                      value={topic}
+                      onChange={e => { setTopic(e.target.value); setShowTopicPicker(false); }}
+                      placeholder={language === 'RU' ? 'Например: Past Continuous...' : 'Masalan: Past Continuous...'}
+                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm min-h-[80px] resize-none text-slate-900 dark:text-white"
+                    />
+                  </div>
+                </div>
+
+                {/* Learning Goal */}
+                <div className="space-y-3">
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                    {language === 'RU' ? 'Цель обучения' : 'O\'quv maqsadi'}
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {LEARNING_GOALS.map(g => {
+                      const Icon = g.icon;
+                      return (
+                        <button
+                          key={g.value}
+                          onClick={() => setGoal(g.value)}
+                          className={cn(
+                            'py-2.5 rounded-xl text-[11px] font-bold flex flex-col items-center gap-1 transition-all border',
+                            goal === g.value
+                              ? `${g.color} text-white border-transparent`
+                              : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500'
+                          )}
+                        >
+                          <Icon className="h-3.5 w-3.5" />
+                          {g.labelUZ}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Language */}
+                <div className="space-y-3">
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">
                     {language === 'RU' ? 'Язык поддержки' : 'Qo\'llab-quvvatlash tili'}
                   </label>
-                  <div className="flex bg-slate-50 dark:bg-slate-800 p-1.5 rounded-xl border">
+                  <div className="flex bg-slate-50 dark:bg-slate-800 p-1.5 rounded-xl border border-slate-200 dark:border-slate-700">
                     {(['RU', 'UZ'] as const).map(l => (
-                      <button key={l} onClick={() => setLanguage(l)} className={cn('flex-1 py-2.5 rounded-lg text-xs font-bold', language === l ? 'bg-white dark:bg-slate-900 text-indigo-600' : 'text-slate-400')}>
+                      <button
+                        key={l}
+                        onClick={() => setLanguage(l)}
+                        className={cn(
+                          'flex-1 py-2.5 rounded-lg text-xs font-bold transition-all',
+                          language === l ? 'bg-white dark:bg-slate-900 text-indigo-600 shadow-sm' : 'text-slate-400'
+                        )}
+                      >
                         {l === 'RU' ? 'Русский' : 'O\'zbekcha'}
                       </button>
                     ))}
                   </div>
                 </div>
 
-                <Button onClick={() => generateLesson()} disabled={loading || !topic} size="lg" className="w-full rounded-xl h-14 text-lg font-bold bg-indigo-600 text-white">
-                  {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : (language === 'RU' ? 'Начать урок' : 'Darsni boshlash')}
+                <Button
+                  onClick={() => loadLesson()}
+                  disabled={loading || !topic}
+                  size="lg"
+                  className="w-full rounded-xl h-14 text-lg font-bold bg-indigo-600 hover:bg-indigo-700 text-white"
+                >
+                  {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : (
+                    <>{language === 'RU' ? 'Начать урок' : 'Darsni boshlash'} <ChevronRight className="h-5 w-5" /></>
+                  )}
                 </Button>
               </Card>
             </div>
 
+            {/* RIGHT: Preview / Status */}
             <div className="flex-1 w-full min-h-[600px]">
               <Card className="h-full border-slate-200 dark:border-slate-800 shadow-sm rounded-2xl p-6 md:p-10 overflow-y-auto relative min-h-[700px] bg-white dark:bg-slate-900">
                 <AnimatePresence mode="wait">
-                  {/* Feedback Panel */}
+
                   {showFeedback ? (
                     <motion.div key="feedback" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="h-full flex flex-col items-center justify-center text-center p-8">
                       <div className="h-20 w-20 bg-amber-50 dark:bg-amber-900/20 rounded-full flex items-center justify-center mb-6 text-amber-500">
@@ -359,25 +448,19 @@ Return ONLY valid JSON.`;
                       </h3>
                       <p className="text-slate-500 dark:text-slate-400 font-medium max-w-sm mx-auto mb-6">
                         {language === 'RU'
-                          ? 'Расскажите, что было не так, и мы создадим улучшенный урок.'
-                          : 'Nima noto\'g\'ri ekanligini ayting, biz yaxshilangan dars yaratamiz.'}
+                          ? 'Расскажите, что было не так, мы перезагрузим урок.'
+                          : 'Nima noto\'g\'ri ekanligini ayting, darsni qayta yuklaymiz.'}
                       </p>
-
                       <textarea
                         value={feedbackText}
                         onChange={e => setFeedbackText(e.target.value)}
                         placeholder={language === 'RU'
-                          ? 'Например: слишком сложно, мало примеров, тема не раскрыта...'
-                          : 'Masalan: juda murakkab, misollar kam, mavzu to\'liq ochilmagan...'}
+                          ? 'Например: слишком сложно...'
+                          : 'Masalan: juda murakkab...'}
                         className="w-full max-w-md bg-slate-50 dark:bg-slate-800 border rounded-xl p-4 text-sm min-h-[120px] resize-none mb-4"
                       />
-
                       <div className="flex gap-3">
-                        <Button
-                          onClick={() => { setShowFeedback(false); setFeedbackText(''); }}
-                          variant="outline"
-                          className="rounded-xl px-6 h-12"
-                        >
+                        <Button onClick={() => { setShowFeedback(false); setFeedbackText(''); }} variant="outline" className="rounded-xl px-6 h-12">
                           {language === 'RU' ? 'Отмена' : 'Bekor qilish'}
                         </Button>
                         <Button
@@ -385,34 +468,25 @@ Return ONLY valid JSON.`;
                           disabled={!feedbackText.trim() || regenerating}
                           className="rounded-xl px-6 h-12 bg-indigo-600 text-white flex items-center gap-2"
                         >
-                          {regenerating ? (
-                            <Loader2 className="h-5 w-5 animate-spin" />
-                          ) : (
-                            <>
-                              <RefreshCw className="h-4 w-4" />
-                              {language === 'RU' ? 'Создать заново' : 'Qayta yaratish'}
-                            </>
+                          {regenerating ? <Loader2 className="h-5 w-5 animate-spin" /> : (
+                            <><RefreshCw className="h-4 w-4" /> {language === 'RU' ? 'Снова' : 'Qayta'}</>
                           )}
                         </Button>
                       </div>
                     </motion.div>
+
                   ) : error ? (
                     <motion.div key="error" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="h-full flex flex-col items-center justify-center text-center p-8">
-                      <div className="h-20 w-20 bg-rose-50 rounded-full flex items-center justify-center mb-6 text-rose-500"><Zap className="h-10 w-10" /></div>
-                      <h3 className="text-xl font-bold mb-2 text-slate-900 dark:text-white">
-                        {language === 'RU' ? 'Ой! Произошла ошибка' : 'Xatolik yuz berdi'}
-                      </h3>
+                      <div className="h-20 w-20 bg-rose-50 rounded-full flex items-center justify-center mb-6 text-rose-500">
+                        <BookOpen className="h-10 w-10" />
+                      </div>
+                      <h3 className="text-xl font-bold mb-2 text-slate-900 dark:text-white">Xatolik yuz berdi</h3>
                       <p className="text-slate-500 dark:text-slate-400 font-medium max-w-sm mx-auto mb-8">{error}</p>
-                      <Button onClick={() => generateLesson()} variant="outline" className="rounded-xl px-8 h-12">
-                        {language === 'RU' ? 'Попробовать снова' : 'Qaytadan urinish'}
+                      <Button onClick={() => { setError(null); }} variant="outline" className="rounded-xl px-8 h-12">
+                        {language === 'RU' ? 'Назад' : 'Orqaga'}
                       </Button>
-                      {rawError && (
-                        <details className="mt-6 text-left max-w-xl mx-auto bg-slate-50 dark:bg-slate-800 p-4 rounded-lg text-xs">
-                          <summary className="font-bold">Debug info</summary>
-                          <pre className="whitespace-pre-wrap mt-2 text-[12px]">{rawError}</pre>
-                        </details>
-                      )}
                     </motion.div>
+
                   ) : loading ? (
                     <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-full flex flex-col items-center justify-center text-center py-20">
                       <div className="relative mb-8">
@@ -426,20 +500,39 @@ Return ONLY valid JSON.`;
                         />
                       </div>
                       <h2 className="text-2xl font-black mb-4 text-slate-900 dark:text-white tracking-tight">
-                        {loadingMessage || (language === 'RU' ? 'AI создаёт урок...' : 'AI dars yaratmoqda...')}
+                        {language === 'RU' ? 'Загрузка урока...' : 'Dars yuklanmoqda...'}
                       </h2>
                       <p className="max-w-md text-slate-500 dark:text-slate-400 font-medium text-base">
-                        {language === 'RU' ? 'Это займёт несколько секунд.' : 'Bu bir necha soniya davom etadi.'}
+                        {language === 'RU' ? 'Секунду...' : 'Biroz kuting...'}
                       </p>
                     </motion.div>
+
                   ) : (
                     <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-full flex flex-col items-center justify-center text-center py-20">
-                      <div className="h-24 w-24 bg-slate-50 dark:bg-slate-800 rounded-3xl flex items-center justify-center mb-6 border border-slate-100 shadow-sm"><BrainCircuit className="h-10 w-10 text-slate-300" /></div>
-                      <h2 className="text-2xl font-black mb-4 text-slate-900 dark:text-white tracking-tight">AI Smart Tutor</h2>
-                      <p className="max-w-md text-slate-500 dark:text-slate-400 font-medium text-base">
+                      <div className="h-24 w-24 bg-slate-50 dark:bg-slate-800 rounded-3xl flex items-center justify-center mb-6 border border-slate-100 shadow-sm">
+                        <BrainCircuit className="h-10 w-10 text-slate-300" />
+                      </div>
+                      <h2 className="text-2xl font-black mb-4 text-slate-900 dark:text-white tracking-tight">Smart Tutor</h2>
+                      <p className="max-w-md text-slate-500 dark:text-slate-400 font-medium text-base mb-8">
                         {language === 'RU'
-                          ? 'Выберите уровень, цель и введите тему для персонализированного урока английского языка.'
-                          : 'Daraja, maqsad va mavzuni tanlang — shaxsiy ingliz tili darsi yaratiladi.'}
+                          ? 'Выберите уровень, тему и нажмите «Начать урок»'
+                          : 'Daraja va mavzuni tanlang, so\'ng "Darsni boshlash" tugmasini bosing.'}
+                      </p>
+
+                      {/* Quick stats */}
+                      <div className="flex gap-4 flex-wrap justify-center">
+                        {Object.entries(CURRICULUM).map(([lvl]) => {
+                          return (
+                            <div key={lvl} className="text-center">
+                              <div className="text-lg font-black text-slate-900 dark:text-white">AI</div>
+                              <div className="text-[10px] text-slate-400 font-bold uppercase">{lvl}</div>
+                            </div>
+                          );
+                        })}
+
+                      </div>
+                      <p className="text-xs text-slate-400 mt-3">
+                        {language === 'RU' ? 'Генерация ИИ' : 'AI Yaratuvchi Dastur'}
                       </p>
                     </motion.div>
                   )}
