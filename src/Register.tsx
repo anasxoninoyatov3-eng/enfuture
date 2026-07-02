@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2, Mail, User, ArrowRight, CheckCircle, ChevronDown } from 'lucide-react';
 import { useUserStore } from '@/userStore';
@@ -241,7 +241,7 @@ export const RegisterPage = () => {
 
                   <p className="text-center text-sm text-slate-500 dark:text-slate-400">
                     Allaqachon hisobingiz bormi?{' '}
-                    <Link to="/login" className="text-indigo-600 font-bold hover:underline">Kirish</Link>
+                    <a href="https://login.enfuture.uz/login" className="text-indigo-600 font-bold hover:underline">Kirish</a>
                   </p>
                 </motion.div>
               )}

@@ -202,7 +202,7 @@ export const AITutorPage = () => {
       const text = await generateContent(instruction, actionPrompt);
       const parsed = parseJsonLoose(text) as any;
       if (parsed?.content && currentLesson.sections) {
-        const updatedSections = currentLesson.sections.map((s, i) =>
+        const updatedSections = currentLesson.sections.map((s) =>
           s.title === section?.title ? { ...s, content: parsed.content } : s
         );
         setCurrentLesson({ ...currentLesson, sections: updatedSections });
@@ -330,7 +330,7 @@ export const AITutorPage = () => {
                         exit={{ opacity: 0, y: -8 }}
                         className="rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-lg bg-white dark:bg-slate-900"
                       >
-                        {(CURRICULUM[level] || []).map((t, i) => {
+                        {(CURRICULUM[level] || []).map((t) => {
                           return (
                             <button
                               key={t}
