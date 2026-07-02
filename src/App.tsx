@@ -17,6 +17,7 @@ import { useUserStore } from '@/userStore';
 const ADMIN_EMAIL = 'dinoyatova21@gmail.com';
 const ADMIN_DOMAIN = 'admin.enfuture.uz';
 const USER_DOMAIN = 'user.enfuture.uz';
+const LOGIN_DOMAIN = 'login.enfuture.uz';
 
 // Smart domain-based redirector and state synchronizer
 const DomainManager = ({ children }: { children: React.ReactNode }) => {
@@ -47,7 +48,8 @@ const DomainManager = ({ children }: { children: React.ReactNode }) => {
   // 2. Routing logic based on domain
   const isAdminDomain = hostname === ADMIN_DOMAIN;
   const isUserDomain = hostname === USER_DOMAIN;
-  const isMainDomain = !isAdminDomain && !isUserDomain;
+  const isLoginDomain = hostname === LOGIN_DOMAIN;
+  const isMainDomain = !isAdminDomain && !isUserDomain && !isLoginDomain;
 
   useEffect(() => {
     // Faqat haqiqiy enfuture.uz domenlaridan kirsagina redirect qilsin. Vercel (.app) yoki local domenda qotib qolmasligi uchun ehtiyot sharti:
@@ -55,27 +57,33 @@ const DomainManager = ({ children }: { children: React.ReactNode }) => {
     if (isLocalhost) return;
 
     if (!isAuthenticated || !user) {
+      // Login yoki Register ga boshqa domendan kirishsa login.enfuture.uz ga yuboramiz
+      if ((pathname === '/login' || pathname === '/register') && !isLoginDomain) {
+        window.location.replace(`https://${LOGIN_DOMAIN}${pathname}`);
+      }
+      // Login domenida shunchaki / bo'lib tursa ham login o'ziga yuboramiz
+      if (isLoginDomain && pathname === '/') {
+        window.location.replace(`https://${LOGIN_DOMAIN}/login`);
+      }
       return;
     }
 
     const isAdminEmail = user.email.toLowerCase() === ADMIN_EMAIL;
     const syncPayload = btoa(JSON.stringify({ user }));
 
-    // Asosiy domenda faqat Tizimga Kiritilgan (Dashboard yoki Admin) sahifalariga kirgandagina subdomain'ga otaveradi:
-    if (isMainDomain) {
-      if (pathname.startsWith('/dashboard') || pathname.startsWith('/admin') || pathname.startsWith('/courses') || pathname.startsWith('/ai-tutor') || pathname.startsWith('/profile')) {
-         if (isAdminEmail) {
-           window.location.replace(`https://${ADMIN_DOMAIN}/admin?sync_token=${syncPayload}`);
-         } else {
-           window.location.replace(`https://${USER_DOMAIN}${pathname}?sync_token=${syncPayload}`);
-         }
+    if (isAdminEmail) {
+      // Admin bitta ro'yxatdan o'tdimi yo logindan kirdimi srazu o'zini joyiga uchadi:
+      if (!isAdminDomain && (pathname.startsWith('/admin') || isLoginDomain || pathname.startsWith('/dashboard') || pathname === '/login' || pathname === '/register')) {
+         window.location.replace(`https://${ADMIN_DOMAIN}/admin?sync_token=${syncPayload}`);
       }
-    } else if (isAdminDomain && !isAdminEmail) {
-      window.location.replace(`https://${USER_DOMAIN}/dashboard?sync_token=${syncPayload}`);
-    } else if (isUserDomain && isAdminEmail) {
-      window.location.replace(`https://${ADMIN_DOMAIN}/admin?sync_token=${syncPayload}`);
+    } else {
+      // Oddiy User logindan kirdimi o'zining joyiga uchadi:
+      if (!isUserDomain && (pathname.startsWith('/dashboard') || pathname.startsWith('/courses') || pathname.startsWith('/ai-tutor') || pathname.startsWith('/profile') || isLoginDomain || pathname === '/login' || pathname === '/register')) {
+         const targetPath = (pathname.startsWith('/dashboard') || pathname.startsWith('/courses') || pathname.startsWith('/ai-tutor') || pathname.startsWith('/profile')) ? pathname : '/dashboard';
+         window.location.replace(`https://${USER_DOMAIN}${targetPath}?sync_token=${syncPayload}`);
+      }
     }
-  }, [isAuthenticated, user, hostname, pathname, isAdminDomain, isUserDomain, isMainDomain, isLocalhost]);
+  }, [isAuthenticated, user, hostname, pathname, isAdminDomain, isUserDomain, isLoginDomain, isMainDomain, isLocalhost]);
 
   // 3. Strict 403 Barrier for SUBDOMAINS without auth
   const isInvalidAdmin = isAdminDomain && (!isAuthenticated || user?.email.toLowerCase() !== ADMIN_EMAIL);
