@@ -218,7 +218,7 @@ export const RegisterPage = () => {
                             initial={{ opacity: 0, y: -8, scale: 0.97 }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, y: -8, scale: 0.97 }}
-                            className="absolute top-full mt-2 w-full bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-700 z-50 overflow-hidden"
+                            className="absolute top-full mt-2 w-full bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-700 z-50 max-h-64 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-indigo-200 dark:scrollbar-thumb-slate-600"
                           >
                             {LEVELS.map(lv => (
                               <button
