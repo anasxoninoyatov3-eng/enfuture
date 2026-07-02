@@ -112,24 +112,33 @@ export const useUserStore = create<UserState>()(
           pendingRegistration: { firstName, lastName, email, level, otp, expiresAt }
         });
 
-        // EmailJS or your real API logic to send OTP to the user's email
-        // Make sure to replace YOUR_SERVICE_ID, YOUR_TEMPLATE_ID, YOUR_PUBLIC_KEY
-        try {
+        // Real API logic to send OTP to the user's email using EmailJS
+        const serviceId = (import.meta as any).env.VITE_EMAILJS_SERVICE_ID;
+        const templateId = (import.meta as any).env.VITE_EMAILJS_TEMPLATE_ID;
+        const publicKey = (import.meta as any).env.VITE_EMAILJS_PUBLIC_KEY;
+
+        if (serviceId && templateId && publicKey) {
           fetch('https://api.emailjs.com/api/v1.0/email/send', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              service_id: 'default_service',
-              template_id: 'template_otp', // Replace with your template ID
-              user_id: 'YOUR_PUBLIC_KEY', // Replace with your public key
+              service_id: serviceId,
+              template_id: templateId,
+              user_id: publicKey,
               template_params: {
                 to_email: email,
                 to_name: `${firstName} ${lastName}`,
+                otp_code: otp,
                 message: `Sizning tasdiqlash kodingiz (OTP): ${otp}`
               }
             })
-          }).catch(err => console.error("EmailJS error (ignore if not setup):", err));
-        } catch (e) { }
+          }).then(res => {
+            if (res.ok) console.log(`📧 Email sent successfully to ${email}`);
+            else console.error("EmailJS Error", res);
+          }).catch(err => console.error("EmailJS network error:", err));
+        } else {
+          console.warn('EmailJS keys are missing in .env file!');
+        }
 
         console.log(`📧 OTP for ${email}: ${otp}`); // For dev/demo
         return { success: true, message: 'OTP yuborildi', otp };
@@ -205,22 +214,30 @@ export const useUserStore = create<UserState>()(
           }
         });
 
-        try {
+        const serviceId = (import.meta as any).env.VITE_EMAILJS_SERVICE_ID;
+        const templateId = (import.meta as any).env.VITE_EMAILJS_TEMPLATE_ID;
+        const publicKey = (import.meta as any).env.VITE_EMAILJS_PUBLIC_KEY;
+
+        if (serviceId && templateId && publicKey) {
           fetch('https://api.emailjs.com/api/v1.0/email/send', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              service_id: 'default_service',
-              template_id: 'template_otp', // Replace with your template ID
-              user_id: 'YOUR_PUBLIC_KEY', // Replace with your public key
+              service_id: serviceId,
+              template_id: templateId,
+              user_id: publicKey,
               template_params: {
                 to_email: email,
                 to_name: `${existingUser.firstName} ${existingUser.lastName}`,
+                otp_code: otp,
                 message: `Sizning tizimga kirish kodingiz (OTP): ${otp}`
               }
             })
-          }).catch(err => console.error("EmailJS error (ignore if not setup):", err));
-        } catch (e) { }
+          }).then(res => {
+            if (res.ok) console.log(`📧 Login Email sent successfully to ${email}`);
+            else console.error("EmailJS Error", res);
+          }).catch(err => console.error("EmailJS network error:", err));
+        }
 
         console.log(`📧 Login OTP for ${email}: ${otp}`);
         return { success: true, message: 'OTP yuborildi', otp };
@@ -254,9 +271,9 @@ export const useUserStore = create<UserState>()(
           timestamp: new Date().toISOString()
         };
 
-        set((state) => ({ 
-          user, 
-          isAuthenticated: true, 
+        set((state) => ({
+          user,
+          isAuthenticated: true,
           pendingRegistration: null,
           auditLogs: [newAudit, ...state.auditLogs]
         }));
