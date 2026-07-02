@@ -34,14 +34,18 @@ const DomainManager = ({ children }: { children: React.ReactNode }) => {
 
     if (syncToken) {
       try {
-        const decoded = JSON.parse(atob(syncToken));
+        // Safe decoding for base64 with unicode characters
+        const base64Str = syncToken;
+        const jsonString = decodeURIComponent(escape(atob(base64Str)));
+        const decoded = JSON.parse(jsonString);
+        
         if (decoded && decoded.user) {
           useUserStore.setState({ user: decoded.user, isAuthenticated: true });
         }
         // Remove token from URL
         window.history.replaceState({}, document.title, window.location.pathname);
       } catch (e) {
-        console.error('Failed to sync session data');
+        console.error('Failed to sync session data:', e);
       }
     }
   }, []);
@@ -70,7 +74,11 @@ const DomainManager = ({ children }: { children: React.ReactNode }) => {
     }
 
     const isAdminEmail = user.email.toLowerCase() === ADMIN_EMAIL;
-    const syncPayload = btoa(JSON.stringify({ user }));
+    
+    // Safe encoding for base64 with unicode and URL-safe characters
+    const jsonString = JSON.stringify({ user });
+    const base64Str = btoa(unescape(encodeURIComponent(jsonString)));
+    const syncPayload = encodeURIComponent(base64Str);
 
     if (isAdminEmail) {
       // Admin bitta ro'yxatdan o'tdimi yo logindan kirdimi srazu o'zini joyiga uchadi:
