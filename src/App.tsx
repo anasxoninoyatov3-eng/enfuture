@@ -50,8 +50,7 @@ const DomainManager = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     if (!isAuthenticated || !user) {
-      // Unauthenticated users trying to access user.enfuture.uz should be bounced to main domain (or just let them login there, but bouncing is safer)
-      if (isUserDomain && !isLocalhost) {
+      if (isUserDomain && hostname.includes('enfuture.uz')) {
         window.location.replace(`https://www.enfuture.uz/login`);
       }
       return;
@@ -60,8 +59,8 @@ const DomainManager = ({ children }: { children: React.ReactNode }) => {
     const isAdminEmail = user.email.toLowerCase() === ADMIN_EMAIL;
     const syncPayload = btoa(JSON.stringify({ user }));
 
-    // Localhostda doim ozini domenida ishlashi uchun skip
-    if (isLocalhost) return;
+    // Faqat haqiqiy enfuture.uz domenlaridan kirsagina redirect qilsin. Vercel (.app) yoki local domenda qotib qolmasligi uchun ehtiyot sharti:
+    if (!hostname.includes('enfuture.uz')) return;
 
     if (isMainDomain) {
       if (isAdminEmail) {
