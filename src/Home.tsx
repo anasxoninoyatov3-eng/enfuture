@@ -168,7 +168,7 @@ export const HomePage = () => {
                                        <BookOpen className="h-24 w-24 text-indigo-600/20 relative z-10" />
                                        <div className="absolute inset-0 bg-indigo-900/10 animate-pulse" />
                                     </motion.div>
-                                 ) : ( 
+                                 ) : (
                                     <motion.div key="closed" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}>
                                        <img src="/favicon.svg?v=6" className="h-32 w-32 drop-shadow-2xl" />
                                     </motion.div>

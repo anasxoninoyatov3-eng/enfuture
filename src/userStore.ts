@@ -2,25 +2,45 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { UserProfile, TopicProgress, KnowledgeLevel } from './types';
 
+interface PendingRegistration {
+  firstName: string;
+  lastName: string;
+  email: string;
+  level: KnowledgeLevel;
+  otp: string;
+  expiresAt: number;
+}
+
 interface UserState {
   user: UserProfile | null;
   isAuthenticated: boolean;
   allUsers: (UserProfile & { password?: string })[];
+  pendingRegistration: PendingRegistration | null;
+
+  // Auth
   syncGoogleUser: (userInfo: any) => void;
+  registerWithEmail: (firstName: string, lastName: string, email: string, level: KnowledgeLevel) => { success: boolean; message: string; otp?: string };
+  verifyOtpAndRegister: (email: string, otp: string) => { success: boolean; message: string };
+  loginWithEmail: (email: string) => { success: boolean; message: string; otp?: string };
+  verifyLoginOtp: (email: string, otp: string) => { success: boolean; message: string };
   logout: () => void;
+
+  // Progress
   addXp: (amount: number) => void;
   updateTopicProgress: (topic: string, level: KnowledgeLevel, score: number, mastered: boolean) => void;
   updateProfile: (updates: Partial<UserProfile>) => void;
   clearAllUsers: () => void;
 }
 
+const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
 
 export const useUserStore = create<UserState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       user: null,
       isAuthenticated: false,
       allUsers: [],
+      pendingRegistration: null,
 
       syncGoogleUser: (userInfo) => {
         set((state) => {
@@ -35,7 +55,6 @@ export const useUserStore = create<UserState>()(
           let updatedUser;
 
           if (existingUserIndex >= 0) {
-            // Update existing user
             updatedUser = {
               ...state.allUsers[existingUserIndex],
               firstName,
@@ -44,7 +63,6 @@ export const useUserStore = create<UserState>()(
             };
             updatedAllUsers[existingUserIndex] = updatedUser;
           } else {
-            // Create new user
             updatedUser = {
               id: userInfo.sub || Date.now().toString(),
               firstName,
@@ -66,6 +84,113 @@ export const useUserStore = create<UserState>()(
             isAuthenticated: true
           };
         });
+      },
+
+      registerWithEmail: (firstName, lastName, email, level) => {
+        const state = get();
+        const existing = state.allUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
+        if (existing) {
+          return { success: false, message: 'Bu email allaqachon ro\'yxatdan o\'tgan' };
+        }
+
+        const otp = generateOTP();
+        const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+        set({
+          pendingRegistration: { firstName, lastName, email, level, otp, expiresAt }
+        });
+
+        console.log(`📧 OTP for ${email}: ${otp}`); // For dev/demo
+        return { success: true, message: 'OTP yuborildi', otp };
+      },
+
+      verifyOtpAndRegister: (email, otp) => {
+        const state = get();
+        const pending = state.pendingRegistration;
+
+        if (!pending || pending.email.toLowerCase() !== email.toLowerCase()) {
+          return { success: false, message: 'Ro\'yxatdan o\'tish ma\'lumotlari topilmadi' };
+        }
+
+        if (Date.now() > pending.expiresAt) {
+          set({ pendingRegistration: null });
+          return { success: false, message: 'OTP muddati o\'tib ketdi, qayta urinib ko\'ring' };
+        }
+
+        if (pending.otp !== otp) {
+          return { success: false, message: 'OTP kodi noto\'g\'ri' };
+        }
+
+        const newUser: UserProfile = {
+          id: Date.now().toString(),
+          firstName: pending.firstName,
+          lastName: pending.lastName,
+          email: pending.email,
+          xp: 0,
+          streak: 0,
+          currentLevel: pending.level,
+          topicProgress: [],
+          joinDate: new Date().toISOString()
+        };
+
+        set((state) => ({
+          allUsers: [...state.allUsers, newUser],
+          user: newUser,
+          isAuthenticated: true,
+          pendingRegistration: null
+        }));
+
+        return { success: true, message: 'Muvaffaqiyatli ro\'yxatdan o\'tdingiz!' };
+      },
+
+      loginWithEmail: (email) => {
+        const state = get();
+        const existingUser = state.allUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
+
+        if (!existingUser) {
+          return { success: false, message: 'Bu email bilan ro\'yxatdan o\'tilmagan' };
+        }
+
+        const otp = generateOTP();
+        const expiresAt = Date.now() + 10 * 60 * 1000;
+
+        set({
+          pendingRegistration: {
+            firstName: existingUser.firstName,
+            lastName: existingUser.lastName,
+            email: existingUser.email,
+            level: existingUser.currentLevel,
+            otp,
+            expiresAt
+          }
+        });
+
+        console.log(`📧 Login OTP for ${email}: ${otp}`);
+        return { success: true, message: 'OTP yuborildi', otp };
+      },
+
+      verifyLoginOtp: (email, otp) => {
+        const state = get();
+        const pending = state.pendingRegistration;
+
+        if (!pending || pending.email.toLowerCase() !== email.toLowerCase()) {
+          return { success: false, message: 'Kirish ma\'lumotlari topilmadi' };
+        }
+
+        if (Date.now() > pending.expiresAt) {
+          set({ pendingRegistration: null });
+          return { success: false, message: 'OTP muddati o\'tib ketdi' };
+        }
+
+        if (pending.otp !== otp) {
+          return { success: false, message: 'OTP kodi noto\'g\'ri' };
+        }
+
+        const user = state.allUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
+        if (!user) return { success: false, message: 'Foydalanuvchi topilmadi' };
+
+        set({ user, isAuthenticated: true, pendingRegistration: null });
+        return { success: true, message: 'Muvaffaqiyatli kirdingiz!' };
       },
 
       logout: () => set({ user: null, isAuthenticated: false }),

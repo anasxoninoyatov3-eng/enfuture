@@ -1,11 +1,9 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Button } from '@/Button';
-import { Card, CardContent } from '@/Card';
-import { Loader2 } from 'lucide-react';
+import { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Loader2, Mail, ArrowRight, CheckCircle } from 'lucide-react';
 import { useUserStore } from '@/userStore';
 import { useGoogleLogin } from '@react-oauth/google';
-import { motion } from 'framer-motion';
 
 const GoogleIcon = () => (
   <svg className="h-5 w-5" viewBox="0 0 24 24">
@@ -16,16 +14,19 @@ const GoogleIcon = () => (
   </svg>
 );
 
+type Step = 'email' | 'otp';
+
 export const LoginPage = () => {
   const navigate = useNavigate();
-  const { isAuthenticated, syncGoogleUser } = useUserStore();
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const { loginWithEmail, verifyLoginOtp, syncGoogleUser } = useUserStore();
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/dashboard');
-    }
-  }, [isAuthenticated, navigate]);
+  const [step, setStep] = useState<Step>('email');
+  const [email, setEmail] = useState('');
+  const [otp, setOtp] = useState('');
+  const [devOtp, setDevOtp] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   const onGoogleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
@@ -38,53 +39,223 @@ export const LoginPage = () => {
         syncGoogleUser(userInfo);
         navigate('/dashboard');
       } catch (err) {
-        console.error("Auth Exception", err);
+        console.error('Auth Exception', err);
       } finally {
         setIsGoogleLoading(false);
       }
     }
   });
 
+  const handleSendOtp = async () => {
+    setError('');
+    if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError('To\'g\'ri email manzil kiriting');
+      return;
+    }
+
+    setLoading(true);
+    await new Promise(r => setTimeout(r, 600));
+    const result = loginWithEmail(email.trim());
+    setLoading(false);
+
+    if (!result.success) {
+      setError(result.message);
+      return;
+    }
+
+    if (result.otp) setDevOtp(result.otp);
+    setStep('otp');
+  };
+
+  const handleVerifyOtp = async () => {
+    setError('');
+    if (otp.length !== 6) {
+      setError('6 xonali OTP kodni kiriting');
+      return;
+    }
+
+    setLoading(true);
+    await new Promise(r => setTimeout(r, 500));
+    const result = verifyLoginOtp(email, otp);
+    setLoading(false);
+
+    if (!result.success) {
+      setError(result.message);
+      return;
+    }
+
+    navigate('/dashboard');
+  };
+
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 dark:bg-slate-950 p-6">
+    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-slate-50 via-indigo-50/30 to-violet-50/20 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 p-4">
       <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="w-full max-w-[400px]"
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: 'easeOut' }}
+        className="w-full max-w-[420px]"
       >
-        <div className="text-center mb-10 space-y-4">
-          <img src="/favicon.svg?v=6" alt="Logo" className="h-16 w-16 mx-auto object-contain drop-shadow-xl" />
-          <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight">ENK English</h1>
-          <p className="text-slate-500 dark:text-slate-400 font-medium text-lg leading-tight">Your gateway to mastering English.</p>
+        {/* Logo */}
+        <div className="text-center mb-8 space-y-3">
+          <img src="/favicon.svg?v=6" alt="Logo" className="h-14 w-14 mx-auto object-contain drop-shadow-xl" />
+          <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">ENK English</h1>
+          <p className="text-slate-500 dark:text-slate-400 font-medium">Ingliz tilini o'rganish platformasi</p>
         </div>
 
-        <Card className="border border-slate-200 dark:border-slate-800 shadow-2xl rounded-3xl overflow-hidden bg-white dark:bg-slate-900 mx-4 sm:mx-0">
-          <CardContent className="p-6 sm:p-10 space-y-8">
-            <div className="space-y-2 text-center">
-              <h2 className="text-xl font-bold text-slate-900 dark:text-white">Sign In</h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Use your Google account to continue</p>
-            </div>
+        <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-800 overflow-hidden">
+          <div className="p-8">
+            <AnimatePresence mode="wait">
+              {step === 'email' && (
+                <motion.div
+                  key="email"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  className="space-y-6"
+                >
+                  <div>
+                    <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-1">Tizimga kirish</h2>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Email manzilingizni kiriting</p>
+                  </div>
 
-            <Button
-              type="button"
-              onClick={() => onGoogleLogin()}
-              disabled={isGoogleLoading}
-              className="w-full h-16 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-100 dark:shadow-none transition-all font-bold text-lg flex items-center justify-center gap-4 group"
-            >
-              {isGoogleLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : <div className="bg-white p-1.5 rounded-lg"><GoogleIcon /></div>}
-              {isGoogleLoading ? 'Connecting...' : 'Continue with Google'}
-            </Button>
+                  <div>
+                    <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1.5">Email manzil</label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300" />
+                      <input
+                        type="email"
+                        placeholder="ali@gmail.com"
+                        value={email}
+                        onChange={e => setEmail(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && handleSendOtp()}
+                        className="w-full h-12 pl-10 pr-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-600/50 transition-all text-slate-900 dark:text-white"
+                      />
+                    </div>
+                  </div>
 
-            <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
-              <p className="text-center text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-relaxed">
-                Safe & Secure Authentication via Google OAuth
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+                  {error && (
+                    <motion.p
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="text-sm text-rose-500 font-medium bg-rose-50 dark:bg-rose-900/20 px-4 py-2.5 rounded-xl"
+                    >
+                      {error}
+                    </motion.p>
+                  )}
 
-        <p className="mt-8 text-center text-xs text-slate-400 font-medium px-4">
-          By continuing, you agree to our <span className="text-indigo-600 font-bold cursor-pointer">Terms of Service</span> and <span className="text-indigo-600 font-bold cursor-pointer">Privacy Policy</span>.
+                  <button
+                    type="button"
+                    onClick={handleSendOtp}
+                    disabled={loading}
+                    className="w-full py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-base flex items-center justify-center gap-3 transition-all shadow-lg shadow-indigo-100 dark:shadow-none disabled:opacity-60"
+                  >
+                    {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : (
+                      <>Kod yuborish <ArrowRight className="h-5 w-5" /></>
+                    )}
+                  </button>
+
+                  {/* Divider */}
+                  <div className="flex items-center gap-3">
+                    <div className="h-px flex-1 bg-slate-100 dark:bg-slate-800" />
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">yoki</span>
+                    <div className="h-px flex-1 bg-slate-100 dark:bg-slate-800" />
+                  </div>
+
+                  {/* Google */}
+                  <button
+                    type="button"
+                    onClick={() => onGoogleLogin()}
+                    disabled={isGoogleLoading}
+                    className="w-full h-12 rounded-2xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-white font-bold text-sm flex items-center justify-center gap-3 transition-all"
+                  >
+                    {isGoogleLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <GoogleIcon />}
+                    {isGoogleLoading ? 'Ulanmoqda...' : 'Google bilan kirish'}
+                  </button>
+
+                  <p className="text-center text-sm text-slate-500 dark:text-slate-400">
+                    Hisobingiz yo'qmi?{' '}
+                    <Link to="/register" className="text-indigo-600 font-bold hover:underline">Ro'yxatdan o'ting</Link>
+                  </p>
+                </motion.div>
+              )}
+
+              {step === 'otp' && (
+                <motion.div
+                  key="otp"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  className="space-y-6"
+                >
+                  <div className="text-center">
+                    <div className="w-16 h-16 rounded-2xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center mx-auto mb-4">
+                      <Mail className="h-8 w-8 text-indigo-600" />
+                    </div>
+                    <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-1">OTP Kodni kiriting</h2>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      <span className="font-bold text-slate-700 dark:text-slate-300">{email}</span> ga kod yuborildi
+                    </p>
+                    {devOtp && (
+                      <div className="mt-3 px-4 py-2 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-700">
+                        <p className="text-xs text-amber-700 dark:text-amber-400 font-medium">
+                          🔧 Demo — OTP: <span className="font-black text-amber-800 dark:text-amber-300 text-base">{devOtp}</span>
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-2">OTP Kodi</label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      placeholder="123456"
+                      value={otp}
+                      onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      onKeyDown={e => e.key === 'Enter' && handleVerifyOtp()}
+                      className="w-full h-14 px-4 rounded-xl bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-center text-2xl font-black tracking-widest focus:outline-none focus:border-indigo-600 transition-all text-slate-900 dark:text-white"
+                    />
+                  </div>
+
+                  {error && (
+                    <motion.p
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="text-sm text-rose-500 font-medium bg-rose-50 dark:bg-rose-900/20 px-4 py-2.5 rounded-xl"
+                    >
+                      {error}
+                    </motion.p>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={handleVerifyOtp}
+                    disabled={loading || otp.length !== 6}
+                    className="w-full py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-base flex items-center justify-center gap-3 transition-all shadow-lg shadow-indigo-100 dark:shadow-none disabled:opacity-60"
+                  >
+                    {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : (
+                      <><CheckCircle className="h-5 w-5" /> Kirish</>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => { setStep('email'); setError(''); setOtp(''); }}
+                    className="w-full text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 font-medium transition-colors"
+                  >
+                    ← Orqaga qaytish
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+
+        <p className="mt-6 text-center text-xs text-slate-400 font-medium px-4">
+          Kirish orqali siz{' '}
+          <span className="text-indigo-600 font-bold cursor-pointer">Foydalanish shartlari</span> va{' '}
+          <span className="text-indigo-600 font-bold cursor-pointer">Maxfiylik siyosati</span> ga rozilik bildirasiz.
         </p>
       </motion.div>
     </div>

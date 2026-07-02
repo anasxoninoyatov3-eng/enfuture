@@ -2,10 +2,21 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   BookOpen, Trophy, Star, ArrowRight, Zap, Shield, Crown,
-  Clock, Target, Sparkles, ChevronRight, Play
+  Clock, Target, Sparkles, ChevronRight, Play, Edit3, X, Save,
+  FlaskConical, Layers, Lightbulb, MoreHorizontal
 } from 'lucide-react';
 import { cn } from '@/utils';
 import { useNavigate } from 'react-router-dom';
+
+// === TYPES ===
+type LessonCategory = 'theoretical' | 'easy' | 'other';
+
+interface LessonItem {
+  id: string;
+  topic: string;
+  category: LessonCategory;
+  duration: string;
+}
 
 interface CurriculumItem {
   level: string;
@@ -18,10 +29,18 @@ interface CurriculumItem {
   icon: React.ElementType;
   duration: string;
   difficulty: number;
-  topics: string[];
+  lessons: LessonItem[];
 }
 
-const curriculum: CurriculumItem[] = [
+// === CATEGORY CONFIG ===
+const CATEGORIES: { value: LessonCategory; label: string; icon: React.ElementType; color: string; bg: string }[] = [
+  { value: 'theoretical', label: 'Nazariy', icon: Lightbulb, color: 'text-violet-600', bg: 'bg-violet-50 dark:bg-violet-900/20' },
+  { value: 'easy', label: 'Oson', icon: FlaskConical, color: 'text-emerald-600', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
+  { value: 'other', label: 'Boshqacha', icon: Layers, color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-900/20' },
+];
+
+// === CURRICULUM DATA ===
+const initialCurriculum: CurriculumItem[] = [
   {
     level: 'A1',
     name: 'Beginner',
@@ -33,12 +52,12 @@ const curriculum: CurriculumItem[] = [
     icon: Star,
     duration: '4 weeks',
     difficulty: 1,
-    topics: [
-      'The Verb "to be" (am, is, are)',
-      'Present Simple Tense',
-      'Personal & Possessive Pronouns',
-      'Countable & Uncountable Nouns',
-      'Basic Prepositions (in, on, at)',
+    lessons: [
+      { id: 'a1-1', topic: 'The Verb "to be" (am, is, are)', category: 'theoretical', duration: '15 min' },
+      { id: 'a1-2', topic: 'Present Simple Tense', category: 'theoretical', duration: '20 min' },
+      { id: 'a1-3', topic: 'Personal & Possessive Pronouns', category: 'easy', duration: '15 min' },
+      { id: 'a1-4', topic: 'Countable & Uncountable Nouns', category: 'theoretical', duration: '15 min' },
+      { id: 'a1-5', topic: 'Basic Prepositions (in, on, at)', category: 'easy', duration: '10 min' },
     ],
   },
   {
@@ -52,12 +71,12 @@ const curriculum: CurriculumItem[] = [
     icon: Trophy,
     duration: '5 weeks',
     difficulty: 2,
-    topics: [
-      'Past Simple Tense',
-      'Present Continuous',
-      'Comparatives & Superlatives',
-      'Future with "going to"',
-      'Basic Modal Verbs (can, must, should)',
+    lessons: [
+      { id: 'a2-1', topic: 'Past Simple Tense', category: 'theoretical', duration: '20 min' },
+      { id: 'a2-2', topic: 'Present Continuous', category: 'theoretical', duration: '20 min' },
+      { id: 'a2-3', topic: 'Comparatives & Superlatives', category: 'easy', duration: '15 min' },
+      { id: 'a2-4', topic: 'Future with "going to"', category: 'easy', duration: '15 min' },
+      { id: 'a2-5', topic: 'Basic Modal Verbs (can, must, should)', category: 'theoretical', duration: '20 min' },
     ],
   },
   {
@@ -71,12 +90,12 @@ const curriculum: CurriculumItem[] = [
     icon: Zap,
     duration: '6 weeks',
     difficulty: 3,
-    topics: [
-      'Present Perfect vs Past Simple',
-      'Past Continuous',
-      'First & Second Conditionals',
-      'Passive Voice (Present & Past)',
-      '"Used to" and Past Habits',
+    lessons: [
+      { id: 'b1-1', topic: 'Present Perfect vs Past Simple', category: 'theoretical', duration: '25 min' },
+      { id: 'b1-2', topic: 'Past Continuous', category: 'theoretical', duration: '20 min' },
+      { id: 'b1-3', topic: 'First & Second Conditionals', category: 'theoretical', duration: '25 min' },
+      { id: 'b1-4', topic: 'Passive Voice (Present & Past)', category: 'theoretical', duration: '20 min' },
+      { id: 'b1-5', topic: '"Used to" and Past Habits', category: 'easy', duration: '15 min' },
     ],
   },
   {
@@ -90,12 +109,12 @@ const curriculum: CurriculumItem[] = [
     icon: BookOpen,
     duration: '7 weeks',
     difficulty: 4,
-    topics: [
-      'Present Perfect Continuous',
-      'Third Conditional',
-      'Reported Speech',
-      'Future Perfect & Continuous',
-      'Modal Verbs for Deduction',
+    lessons: [
+      { id: 'b2-1', topic: 'Present Perfect Continuous', category: 'theoretical', duration: '25 min' },
+      { id: 'b2-2', topic: 'Third Conditional', category: 'theoretical', duration: '25 min' },
+      { id: 'b2-3', topic: 'Reported Speech', category: 'theoretical', duration: '25 min' },
+      { id: 'b2-4', topic: 'Future Perfect & Continuous', category: 'other', duration: '20 min' },
+      { id: 'b2-5', topic: 'Modal Verbs for Deduction', category: 'other', duration: '20 min' },
     ],
   },
   {
@@ -109,12 +128,12 @@ const curriculum: CurriculumItem[] = [
     icon: Shield,
     duration: '8 weeks',
     difficulty: 5,
-    topics: [
-      'Mixed Conditionals',
-      'Inversion for Emphasis',
-      'Advanced Passive Structures',
-      'Gerunds vs Infinitives',
-      'Cleft Sentences',
+    lessons: [
+      { id: 'c1-1', topic: 'Mixed Conditionals', category: 'theoretical', duration: '30 min' },
+      { id: 'c1-2', topic: 'Inversion for Emphasis', category: 'other', duration: '25 min' },
+      { id: 'c1-3', topic: 'Advanced Passive Structures', category: 'theoretical', duration: '25 min' },
+      { id: 'c1-4', topic: 'Gerunds vs Infinitives', category: 'easy', duration: '20 min' },
+      { id: 'c1-5', topic: 'Cleft Sentences', category: 'other', duration: '25 min' },
     ],
   },
   {
@@ -128,16 +147,17 @@ const curriculum: CurriculumItem[] = [
     icon: Crown,
     duration: '10 weeks',
     difficulty: 6,
-    topics: [
-      'The Subjunctive Mood',
-      'Narrative Tenses (Advanced)',
-      'Advanced Idioms & Expressions',
-      'Complex Clauses & Participles',
-      'Discourse Markers',
+    lessons: [
+      { id: 'c2-1', topic: 'The Subjunctive Mood', category: 'theoretical', duration: '30 min' },
+      { id: 'c2-2', topic: 'Narrative Tenses (Advanced)', category: 'theoretical', duration: '35 min' },
+      { id: 'c2-3', topic: 'Advanced Idioms & Expressions', category: 'other', duration: '25 min' },
+      { id: 'c2-4', topic: 'Complex Clauses & Participles', category: 'theoretical', duration: '30 min' },
+      { id: 'c2-5', topic: 'Discourse Markers', category: 'other', duration: '25 min' },
     ],
   },
 ];
 
+// === SUBCOMPONENTS ===
 const DifficultyDots = ({ count, total = 6, accent }: { count: number; total?: number; accent: string }) => (
   <div className="flex items-center gap-1">
     {Array.from({ length: total }).map((_, i) => (
@@ -159,21 +179,143 @@ const cardVariants: any = {
   show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 260, damping: 22 } },
 };
 
+// === EDIT LESSON MODAL ===
+const EditLessonModal = ({
+  lesson,
+  onSave,
+  onClose,
+}: {
+  lesson: LessonItem;
+  onSave: (updated: LessonItem) => void;
+  onClose: () => void;
+}) => {
+  const [topic, setTopic] = useState(lesson.topic);
+  const [category, setCategory] = useState<LessonCategory>(lesson.category);
+  const [duration, setDuration] = useState(lesson.duration);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.9, y: 20 }}
+        animate={{ scale: 1, y: 0 }}
+        exit={{ scale: 0.9, y: 20 }}
+        onClick={e => e.stopPropagation()}
+        className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-800 w-full max-w-lg overflow-hidden"
+      >
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800">
+          <div className="flex items-center gap-2">
+            <Edit3 className="h-4 w-4 text-indigo-600" />
+            <h3 className="font-bold text-slate-900 dark:text-white">Darsni tahrirlash</h3>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+            <X className="h-4 w-4 text-slate-500" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-5">
+          <div>
+            <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1.5">Dars mavzusi</label>
+            <input
+              type="text"
+              value={topic}
+              onChange={e => setTopic(e.target.value)}
+              className="w-full h-11 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-600/50 text-slate-900 dark:text-white"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1.5">Kategoriya</label>
+            <div className="flex gap-2">
+              {CATEGORIES.map(cat => {
+                const Icon = cat.icon;
+                return (
+                  <button
+                    key={cat.value}
+                    type="button"
+                    onClick={() => setCategory(cat.value)}
+                    className={cn(
+                      'flex-1 flex flex-col items-center gap-1.5 py-3 rounded-xl border-2 transition-all text-xs font-bold',
+                      category === cat.value
+                        ? `border-indigo-600 ${cat.bg} ${cat.color}`
+                        : 'border-slate-100 dark:border-slate-800 text-slate-400 hover:border-slate-200'
+                    )}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {cat.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1.5">Davomiyligi</label>
+            <input
+              type="text"
+              value={duration}
+              onChange={e => setDuration(e.target.value)}
+              placeholder="15 min"
+              className="w-full h-11 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-600/50 text-slate-900 dark:text-white"
+            />
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <button
+              onClick={onClose}
+              className="flex-1 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 font-bold text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+            >
+              Bekor qilish
+            </button>
+            <button
+              onClick={() => { onSave({ ...lesson, topic, category, duration }); onClose(); }}
+              className="flex-1 py-2.5 rounded-xl bg-indigo-600 text-white font-bold text-sm hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"
+            >
+              <Save className="h-4 w-4" /> Saqlash
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+};
+
+// === MAIN PAGE ===
 export const CoursesPage = () => {
   const [activeLevel, setActiveLevel] = useState<string>('B1');
+  const [activeCategory, setActiveCategory] = useState<LessonCategory | 'all'>('all');
+  const [curriculum, setCurriculum] = useState(initialCurriculum);
+  const [editingLesson, setEditingLesson] = useState<LessonItem | null>(null);
   const navigate = useNavigate();
 
   const active = curriculum.find((c) => c.level === activeLevel)!;
+
+  const filteredLessons = activeCategory === 'all'
+    ? active.lessons
+    : active.lessons.filter(l => l.category === activeCategory);
 
   const handleStartLesson = (level: string, topic: string) => {
     navigate(`/ai-tutor?level=${level}&topic=${encodeURIComponent(topic)}&auto=1`);
   };
 
+  const handleSaveLesson = (updated: LessonItem) => {
+    setCurriculum(prev => prev.map(course => ({
+      ...course,
+      lessons: course.lessons.map(l => l.id === updated.id ? updated : l)
+    })));
+  };
+
+  const getCategoryInfo = (cat: LessonCategory) => CATEGORIES.find(c => c.value === cat)!;
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-800/60">
       {/* ── Hero Header ─────────────────────────────────────────── */}
       <div className="relative overflow-hidden bg-white dark:bg-slate-900 border-b border-slate-100">
-        {/* Decorative blobs */}
         <div className="pointer-events-none absolute -top-24 -right-24 h-72 w-72 rounded-full bg-indigo-100/60 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-12 -left-12 h-48 w-48 rounded-full bg-violet-100/50 blur-2xl" />
 
@@ -187,21 +329,21 @@ export const CoursesPage = () => {
             <div className="space-y-3">
               <div className="inline-flex items-center gap-2 rounded-full bg-indigo-50 px-4 py-1.5 text-xs font-bold text-indigo-600 uppercase tracking-widest">
                 <Sparkles className="h-3.5 w-3.5" />
-                Full Curriculum
+                To'liq o'quv dasturi
               </div>
               <h1 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white leading-none tracking-tight">
-                Your <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-violet-600">Courses</span>
+                Sizning <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-violet-600">Kurslaringiz</span>
               </h1>
               <p className="text-slate-500 dark:text-slate-400 text-base font-medium max-w-xl leading-relaxed">
-                Six levels from A1 to C2. Pick a level, choose a topic, and let the AI guide you through a personalized lesson.
+                A1 dan C2 gacha 6 daraja. Darajani tanlang, mavzuni bosing va AI bilan o'rganishni boshlang.
               </p>
             </div>
 
             {/* Stats row */}
             <div className="flex flex-wrap gap-4 shrink-0">
               {[
-                { label: 'Levels', value: '6', icon: Target },
-                { label: 'Lessons', value: '30+', icon: BookOpen },
+                { label: 'Darajalar', value: '6', icon: Target },
+                { label: 'Darslar', value: '30+', icon: BookOpen },
                 { label: 'AI-Powered', value: '100%', icon: Sparkles },
               ].map(({ label, value, icon: Icon }) => (
                 <div key={label} className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 rounded-xl px-5 py-3">
@@ -229,7 +371,7 @@ export const CoursesPage = () => {
               return (
                 <button
                   key={item.level}
-                  onClick={() => setActiveLevel(item.level)}
+                  onClick={() => { setActiveLevel(item.level); setActiveCategory('all'); }}
                   className={cn(
                     'flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap transition-all duration-200 shrink-0',
                     isActive
@@ -266,14 +408,13 @@ export const CoursesPage = () => {
 
                 {/* Hero level badge */}
                 <div className={cn('relative overflow-hidden rounded-2xl p-8 text-white bg-gradient-to-br', active.gradient)}>
-                  {/* Decorative circle */}
                   <div className="pointer-events-none absolute -bottom-8 -right-8 h-40 w-40 rounded-full bg-white/10" />
                   <div className="pointer-events-none absolute -top-6 -left-6 h-24 w-24 rounded-full bg-white/10" />
 
                   <div className="relative space-y-6">
                     <div className="flex items-start justify-between">
                       <div>
-                        <div className="text-white/70 text-xs font-bold uppercase tracking-widest mb-1">Level</div>
+                        <div className="text-white/70 text-xs font-bold uppercase tracking-widest mb-1">Daraja</div>
                         <div className="text-6xl font-black leading-none">{active.level}</div>
                       </div>
                       <div className="h-14 w-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
@@ -292,7 +433,7 @@ export const CoursesPage = () => {
                         {active.duration}
                       </div>
                       <div className="flex flex-col items-end gap-1">
-                        <span className="text-white/60 text-[10px] font-semibold uppercase tracking-wider">Difficulty</span>
+                        <span className="text-white/60 text-[10px] font-semibold uppercase tracking-wider">Qiyinlik</span>
                         <DifficultyDots count={active.difficulty} accent="bg-white dark:bg-slate-900" />
                       </div>
                     </div>
@@ -301,14 +442,14 @@ export const CoursesPage = () => {
 
                 {/* Other levels mini-list */}
                 <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 shadow-sm p-4 space-y-1">
-                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 pb-2">All Levels</div>
+                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 pb-2">Barcha Darajalar</div>
                   {curriculum.map((item) => {
                     const Icon = item.icon;
                     const isActive = item.level === activeLevel;
                     return (
                       <button
                         key={item.level}
-                        onClick={() => setActiveLevel(item.level)}
+                        onClick={() => { setActiveLevel(item.level); setActiveCategory('all'); }}
                         className={cn(
                           'w-full flex items-center gap-4 px-3 py-3 rounded-xl transition-all duration-200 text-left',
                           isActive ? `${item.bgLight} ${item.borderAccent} border` : 'hover:bg-slate-50 dark:bg-slate-800 border border-transparent'
@@ -325,7 +466,7 @@ export const CoursesPage = () => {
                             {item.level} — {item.name}
                           </div>
                           <div className="text-[11px] text-slate-400 font-medium">
-                            {item.topics.length} lessons · {item.duration}
+                            {item.lessons.length} dars · {item.duration}
                           </div>
                         </div>
                         {isActive && <ChevronRight className={cn('h-4 w-4 shrink-0', item.textAccent)} />}
@@ -335,103 +476,167 @@ export const CoursesPage = () => {
                 </div>
               </div>
 
-              {/* ── Right: Topics ── */}
+              {/* ── Right: Lessons ── */}
               <div className="lg:col-span-8">
                 <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                   {/* Header */}
-                  <div className="px-8 py-6 border-b border-slate-50 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className={cn('h-9 w-9 rounded-lg flex items-center justify-center bg-gradient-to-br', active.gradient)}>
-                        <BookOpen className="h-4 w-4 text-white" />
+                  <div className="px-6 py-5 border-b border-slate-50 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={cn('h-9 w-9 rounded-lg flex items-center justify-center bg-gradient-to-br', active.gradient)}>
+                          <BookOpen className="h-4 w-4 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-slate-900 dark:text-white text-base">Mavjud Darslar</h3>
+                          <p className="text-[11px] text-slate-400 font-semibold">{active.level} · {active.name}</p>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="font-bold text-slate-900 dark:text-white text-base">Available Lessons</h3>
-                        <p className="text-[11px] text-slate-400 font-semibold">{active.level} · {active.name}</p>
-                      </div>
+                      <span className={cn(
+                        'text-[11px] font-black px-3 py-1.5 rounded-full',
+                        active.bgLight, active.textAccent
+                      )}>
+                        {filteredLessons.length} Dars
+                      </span>
                     </div>
-                    <span className={cn(
-                      'text-[11px] font-black px-3 py-1.5 rounded-full',
-                      active.bgLight, active.textAccent
-                    )}>
-                      {active.topics.length} Lessons
-                    </span>
+
+                    {/* Category filter */}
+                    <div className="flex gap-2 flex-wrap">
+                      <button
+                        onClick={() => setActiveCategory('all')}
+                        className={cn(
+                          'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all',
+                          activeCategory === 'all'
+                            ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200'
+                        )}
+                      >
+                        <MoreHorizontal className="h-3.5 w-3.5" />
+                        Barchasi
+                      </button>
+                      {CATEGORIES.map(cat => {
+                        const Icon = cat.icon;
+                        return (
+                          <button
+                            key={cat.value}
+                            onClick={() => setActiveCategory(cat.value)}
+                            className={cn(
+                              'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all',
+                              activeCategory === cat.value
+                                ? `${cat.bg} ${cat.color} border border-current/20`
+                                : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200'
+                            )}
+                          >
+                            <Icon className="h-3.5 w-3.5" />
+                            {cat.label}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
 
-                  {/* Topics list */}
+                  {/* Lessons list */}
                   <motion.div
                     variants={containerVariants}
                     initial="hidden"
                     animate="show"
                     className="divide-y divide-slate-50"
                   >
-                    {active.topics.map((topic, index) => (
-                      <motion.div
-                        key={topic}
-                        variants={cardVariants}
-                        onClick={() => handleStartLesson(active.level, topic)}
-                        className="group flex items-center gap-6 px-8 py-5 cursor-pointer hover:bg-slate-50 dark:bg-slate-800 transition-all duration-200"
-                      >
-                        {/* Number badge */}
-                        <div className={cn(
-                          'shrink-0 h-10 w-10 rounded-xl flex items-center justify-center text-xs font-black transition-all duration-300',
-                          `group-hover:bg-gradient-to-br group-hover:${active.gradient} group-hover:text-white`,
-                          'bg-slate-100 text-slate-400'
-                        )}>
-                          {(index + 1).toString().padStart(2, '0')}
-                        </div>
+                    {filteredLessons.length === 0 ? (
+                      <div className="py-12 text-center text-slate-400">
+                        <Layers className="h-8 w-8 mx-auto mb-2 opacity-40" />
+                        <p className="text-sm font-medium">Bu kategoriyada dars yo'q</p>
+                      </div>
+                    ) : (
+                      filteredLessons.map((lesson, index) => {
+                        const catInfo = getCategoryInfo(lesson.category);
+                        const CatIcon = catInfo.icon;
+                        return (
+                          <motion.div
+                            key={lesson.id}
+                            variants={cardVariants}
+                            className="group flex items-center gap-5 px-6 py-4 hover:bg-slate-50 dark:bg-slate-800/30 transition-all duration-200"
+                          >
+                            {/* Number badge */}
+                            <div className={cn(
+                              'shrink-0 h-10 w-10 rounded-xl flex items-center justify-center text-xs font-black transition-all duration-300',
+                              `group-hover:bg-gradient-to-br group-hover:${active.gradient} group-hover:text-white`,
+                              'bg-slate-100 text-slate-400'
+                            )}>
+                              {(index + 1).toString().padStart(2, '0')}
+                            </div>
 
-                        {/* Topic info */}
-                        <div className="flex-1 min-w-0">
-                          <div className="font-bold text-slate-800 text-base truncate group-hover:text-slate-900 dark:text-white transition-colors">
-                            {topic}
-                          </div>
-                          <div className="text-[11px] text-slate-400 font-semibold mt-0.5 flex items-center gap-2">
-                            <Clock className="h-3 w-3" />
-                            ~15 min · AI-personalized
-                          </div>
-                        </div>
+                            {/* Topic info */}
+                            <div className="flex-1 min-w-0">
+                              <div className="font-bold text-slate-800 text-sm truncate group-hover:text-slate-900 dark:text-white transition-colors">
+                                {lesson.topic}
+                              </div>
+                              <div className="flex items-center gap-3 mt-1">
+                                <div className={cn('flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md', catInfo.bg, catInfo.color)}>
+                                  <CatIcon className="h-2.5 w-2.5" />
+                                  {catInfo.label}
+                                </div>
+                                <div className="text-[11px] text-slate-400 font-semibold flex items-center gap-1">
+                                  <Clock className="h-3 w-3" />
+                                  {lesson.duration}
+                                </div>
+                              </div>
+                            </div>
 
-                        {/* Start button */}
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleStartLesson(active.level, topic);
-                          }}
-                          className={cn(
-                            'shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all duration-300',
-                            'opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0',
-                            `bg-gradient-to-r ${active.gradient} text-white shadow-md`
-                          )}
-                        >
-                          <Play className="h-3.5 w-3.5 fill-white" />
-                          Start
-                        </button>
+                            {/* Actions */}
+                            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                              {/* Edit button */}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingLesson(lesson);
+                                }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition-all"
+                              >
+                                <Edit3 className="h-3.5 w-3.5" />
+                                Tahrir
+                              </button>
 
-                        {/* Arrow (always visible) */}
-                        <ArrowRight className={cn(
-                          'shrink-0 h-5 w-5 transition-all duration-300',
-                          'text-slate-200 group-hover:opacity-0 group-hover:translate-x-2',
-                          active.textAccent
-                        )} />
-                      </motion.div>
-                    ))}
+                              {/* Start button */}
+                              <button
+                                type="button"
+                                onClick={() => handleStartLesson(active.level, lesson.topic)}
+                                className={cn(
+                                  'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white transition-all',
+                                  `bg-gradient-to-r ${active.gradient}`
+                                )}
+                              >
+                                <Play className="h-3.5 w-3.5 fill-white" />
+                                Boshlash
+                              </button>
+                            </div>
+
+                            {/* Arrow (always visible) */}
+                            <ArrowRight className={cn(
+                              'shrink-0 h-4 w-4 transition-all duration-300',
+                              'text-slate-200 group-hover:opacity-0 group-hover:translate-x-2',
+                              active.textAccent
+                            )} />
+                          </motion.div>
+                        );
+                      })
+                    )}
                   </motion.div>
 
                   {/* Footer CTA */}
-                  <div className="px-8 py-6 border-t border-slate-50 bg-slate-50 dark:bg-slate-800/50 flex items-center justify-between">
+                  <div className="px-6 py-5 border-t border-slate-50 bg-slate-50 dark:bg-slate-800/50 flex items-center justify-between">
                     <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
-                      Start any lesson — the AI tutor adapts to your pace.
+                      Istalgan darsni boshlang — AI o'qituvchi sizga moslashadi.
                     </p>
                     <button
-                      onClick={() => handleStartLesson(active.level, active.topics[0])}
+                      onClick={() => handleStartLesson(active.level, active.lessons[0].topic)}
                       className={cn(
                         'flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105',
                         active.gradient
                       )}
                     >
                       <Zap className="h-4 w-4" />
-                      Start First Lesson
+                      Birinchi darsni boshlash
                     </button>
                   </div>
                 </div>
@@ -441,6 +646,17 @@ export const CoursesPage = () => {
           </motion.div>
         </AnimatePresence>
       </div>
+
+      {/* Edit Modal */}
+      <AnimatePresence>
+        {editingLesson && (
+          <EditLessonModal
+            lesson={editingLesson}
+            onSave={handleSaveLesson}
+            onClose={() => setEditingLesson(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };
