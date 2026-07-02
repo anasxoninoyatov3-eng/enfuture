@@ -15,6 +15,98 @@ import { useUiStore } from '@/uiStore';
 import { useUserStore } from '@/userStore';
 
 const ADMIN_EMAIL = 'dinoyatova21@gmail.com';
+const ADMIN_DOMAIN = 'admin.enfuture.uz';
+const USER_DOMAIN = 'user.enfuture.uz';
+
+// Smart domain-based redirector and state synchronizer
+const DomainManager = ({ children }: { children: React.ReactNode }) => {
+  const { user, isAuthenticated } = useUserStore();
+  const hostname = window.location.hostname;
+  const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+
+  // 1. Handle incoming sync token
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const syncToken = params.get('sync_token');
+    
+    if (syncToken) {
+      try {
+        const decoded = JSON.parse(atob(syncToken));
+        if (decoded && decoded.user) {
+          useUserStore.setState({ user: decoded.user, isAuthenticated: true });
+        }
+        // Remove token from URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } catch (e) {
+        console.error('Failed to sync session data');
+      }
+    }
+  }, []);
+
+  // 2. Routing logic based on domain
+  const isAdminDomain = hostname === ADMIN_DOMAIN;
+  const isUserDomain = hostname === USER_DOMAIN;
+  const isMainDomain = !isAdminDomain && !isUserDomain;
+
+  useEffect(() => {
+    if (!isAuthenticated || !user) {
+      // Unauthenticated users trying to access user.enfuture.uz should be bounced to main domain (or just let them login there, but bouncing is safer)
+      if (isUserDomain && !isLocalhost) {
+        window.location.replace(`https://www.enfuture.uz/login`);
+      }
+      return;
+    }
+
+    const isAdminEmail = user.email.toLowerCase() === ADMIN_EMAIL;
+    const syncPayload = btoa(JSON.stringify({ user }));
+
+    // Localhostda doim ozini domenida ishlashi uchun skip
+    if (isLocalhost) return;
+
+    if (isMainDomain) {
+      if (isAdminEmail) {
+        window.location.replace(`https://${ADMIN_DOMAIN}/admin?sync_token=${syncPayload}`);
+      } else {
+        window.location.replace(`https://${USER_DOMAIN}/dashboard?sync_token=${syncPayload}`);
+      }
+    } else if (isAdminDomain && !isAdminEmail) {
+      window.location.replace(`https://${USER_DOMAIN}/dashboard?sync_token=${syncPayload}`);
+    } else if (isUserDomain && isAdminEmail) {
+      window.location.replace(`https://${ADMIN_DOMAIN}/admin?sync_token=${syncPayload}`);
+    }
+  }, [isAuthenticated, user, hostname, isAdminDomain, isUserDomain, isMainDomain, isLocalhost]);
+
+  // 3. Strict 403 Barrier for admin.enfuture.uz without auth
+  if (isAdminDomain && (!isAuthenticated || user?.email.toLowerCase() !== ADMIN_EMAIL)) {
+    return (
+      <div className="min-h-screen w-full flex flex-col items-center justify-center bg-[#0a0a0a] text-white p-6 font-mono selection:bg-rose-500/30">
+        <div className="max-w-md w-full border border-rose-500/20 bg-rose-500/5 p-8 rounded-2xl shadow-[0_0_40px_rgba(225,29,72,0.1)] text-center relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-rose-500 to-transparent"></div>
+          <div className="mb-6 flex justify-center">
+            <div className="w-16 h-16 rounded-full bg-rose-500/10 flex items-center justify-center border border-rose-500/30">
+              <span className="text-3xl">🚫</span>
+            </div>
+          </div>
+          <h1 className="text-4xl font-black mb-2 text-rose-500 tracking-wider">403</h1>
+          <h2 className="text-xl font-bold mb-4 text-rose-100">ACCESS DENIED</h2>
+          <p className="text-sm text-rose-200/60 mb-6 leading-relaxed">
+            Sizda ushbu server yoki katalogga kirish ruxsati yo'q. Faqatgina platforma ma'murlari tasdiqlangan qurilmalar orqali kira oladi.
+          </p>
+          <div className="space-y-4">
+            <button 
+              onClick={() => window.location.href = 'https://www.enfuture.uz'}
+              className="text-xs uppercase tracking-widest font-bold text-rose-400 hover:text-rose-300 transition-colors border border-rose-500/20 hover:border-rose-500/40 hover:bg-rose-500/10 px-6 py-3 rounded-xl w-full"
+            >
+              ASOSIY SAHIFA
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+};
 
 // Guard: only admin can access /admin
 const AdminRoute = ({ children }: { children: React.ReactNode }) => {
@@ -38,33 +130,35 @@ export const App = () => {
 
   return (
     <BrowserRouter>
-      <Suspense fallback={
-        <div className="h-screen w-screen flex items-center justify-center bg-[var(--background)]">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-[var(--primary)] border-t-transparent" />
-        </div>
-      }>
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          
-          <Route element={<AuthLayout />}>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-          </Route>
+      <DomainManager>
+        <Suspense fallback={
+          <div className="h-screen w-screen flex items-center justify-center bg-[var(--background)]">
+            <div className="h-10 w-10 animate-spin rounded-full border-4 border-[var(--primary)] border-t-transparent" />
+          </div>
+        }>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            
+            <Route element={<AuthLayout />}>
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
+            </Route>
 
-          <Route element={<DashboardLayout />}>
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/courses" element={<CoursesPage />} />
-            <Route path="/ai-tutor" element={<AITutorPage />} />
-            <Route path="/profile" element={<ProfilePage />} />
-            <Route path="/leaderboard" element={<LeaderboardPage />} />
-            <Route path="/admin" element={
-              <AdminRoute>
-                <AdminPanel />
-              </AdminRoute>
-            } />
-          </Route>
-        </Routes>
-      </Suspense>
+            <Route element={<DashboardLayout />}>
+              <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/courses" element={<CoursesPage />} />
+              <Route path="/ai-tutor" element={<AITutorPage />} />
+              <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/leaderboard" element={<LeaderboardPage />} />
+              <Route path="/admin" element={
+                <AdminRoute>
+                  <AdminPanel />
+                </AdminRoute>
+              } />
+            </Route>
+          </Routes>
+        </Suspense>
+      </DomainManager>
     </BrowserRouter>
   );
 };

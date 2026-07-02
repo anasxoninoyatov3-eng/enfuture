@@ -34,7 +34,7 @@ export const AdminPanel = () => {
             Admin Authority - admin.enfuture.uz
           </div>
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Saytga Kirganlar Auditi</h1>
-          <p className="text-slate-500 dark:text-slate-400 font-medium">Faqat ushbu saytga yo'naltirilgan va kirgan foydalanuvchilar haqida hisobot.</p>
+          <p className="text-slate-500 dark:text-slate-400 font-medium">Faqat ushbu "admin" subdomainiga yo'naltirilgan va kirganlar hisoboti.</p>
         </div>
       </motion.div>
 
@@ -66,7 +66,7 @@ export const AdminPanel = () => {
         <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">Audit Loglari</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Faqat shu saytga kirgan va ro'yxatdan o'tganlar nazorati.</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Faqat shu "admin" subdomainiga kirgan va ro'yxatdan o'tganlar nazorati.</p>
           </div>
 
           <div className="flex items-center gap-3">
@@ -80,9 +80,9 @@ export const AdminPanel = () => {
                 className="w-full h-10 pl-10 pr-4 rounded-lg bg-slate-50 dark:bg-slate-800 border-none text-sm focus:ring-2 focus:ring-indigo-600 font-medium transition-all"
               />
             </div>
-            <button 
+            <button
               onClick={() => {
-                if(confirm("Haqiqatan ham barcha audit ma'lumotlarini o'chirib tashlamoqchimisiz?")) {
+                if (confirm("Haqiqatan ham barcha audit ma'lumotlarini o'chirib tashlamoqchimisiz?")) {
                   useUserStore.setState({ auditLogs: [] });
                 }
               }}
@@ -127,7 +127,7 @@ export const AdminPanel = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className={cn("inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold", 
+                      <div className={cn("inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold",
                         log.type === 'login' ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-indigo-50 text-indigo-600 border border-indigo-100"
                       )}>
                         {log.type === 'login' ? 'Tizimga Kirdi' : "Ro'yxatdan o'tdi"}
@@ -139,13 +139,13 @@ export const AdminPanel = () => {
                           {new Date(log.timestamp).toLocaleDateString('uz-UZ', { day: 'numeric', month: 'long', year: 'numeric' })}
                         </span>
                         <span className="text-xs font-medium text-slate-500 flex items-center gap-1 mt-0.5">
-                           {new Date(log.timestamp).toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                          {new Date(log.timestamp).toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                         </span>
                       </div>
                     </td>
                     <td className="px-6 py-4 text-sm font-medium text-slate-500 flex items-center gap-2">
-                       <MapPin className="h-4 w-4 text-slate-400" />
-                       Tashkent, UZ <span className="text-xs text-slate-400 ml-1 opacity-0 group-hover:opacity-100 transition-opacity">(192.168.1.1)</span>
+                      <MapPin className="h-4 w-4 text-slate-400" />
+                      Tashkent, UZ <span className="text-xs text-slate-400 ml-1 opacity-0 group-hover:opacity-100 transition-opacity">(192.168.1.1)</span>
                     </td>
                   </tr>
                 ))
