@@ -22,6 +22,7 @@ const USER_DOMAIN = 'user.enfuture.uz';
 const DomainManager = ({ children }: { children: React.ReactNode }) => {
   const { user, isAuthenticated } = useUserStore();
   const hostname = window.location.hostname;
+  const pathname = window.location.pathname;
   const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
 
   // 1. Handle incoming sync token
@@ -49,34 +50,38 @@ const DomainManager = ({ children }: { children: React.ReactNode }) => {
   const isMainDomain = !isAdminDomain && !isUserDomain;
 
   useEffect(() => {
+    // Faqat haqiqiy enfuture.uz domenlaridan kirsagina redirect qilsin. Vercel (.app) yoki local domenda qotib qolmasligi uchun ehtiyot sharti:
+    if (!hostname.includes('enfuture.uz')) return;
+    if (isLocalhost) return;
+
     if (!isAuthenticated || !user) {
-      if (isUserDomain && hostname.includes('enfuture.uz')) {
-        window.location.replace(`https://www.enfuture.uz/login`);
-      }
       return;
     }
 
     const isAdminEmail = user.email.toLowerCase() === ADMIN_EMAIL;
     const syncPayload = btoa(JSON.stringify({ user }));
 
-    // Faqat haqiqiy enfuture.uz domenlaridan kirsagina redirect qilsin. Vercel (.app) yoki local domenda qotib qolmasligi uchun ehtiyot sharti:
-    if (!hostname.includes('enfuture.uz')) return;
-
+    // Asosiy domenda faqat Tizimga Kiritilgan (Dashboard yoki Admin) sahifalariga kirgandagina subdomain'ga otaveradi:
     if (isMainDomain) {
-      if (isAdminEmail) {
-        window.location.replace(`https://${ADMIN_DOMAIN}/admin?sync_token=${syncPayload}`);
-      } else {
-        window.location.replace(`https://${USER_DOMAIN}/dashboard?sync_token=${syncPayload}`);
+      if (pathname.startsWith('/dashboard') || pathname.startsWith('/admin') || pathname.startsWith('/courses') || pathname.startsWith('/ai-tutor') || pathname.startsWith('/profile')) {
+         if (isAdminEmail) {
+           window.location.replace(`https://${ADMIN_DOMAIN}/admin?sync_token=${syncPayload}`);
+         } else {
+           window.location.replace(`https://${USER_DOMAIN}${pathname}?sync_token=${syncPayload}`);
+         }
       }
     } else if (isAdminDomain && !isAdminEmail) {
       window.location.replace(`https://${USER_DOMAIN}/dashboard?sync_token=${syncPayload}`);
     } else if (isUserDomain && isAdminEmail) {
       window.location.replace(`https://${ADMIN_DOMAIN}/admin?sync_token=${syncPayload}`);
     }
-  }, [isAuthenticated, user, hostname, isAdminDomain, isUserDomain, isMainDomain, isLocalhost]);
+  }, [isAuthenticated, user, hostname, pathname, isAdminDomain, isUserDomain, isMainDomain, isLocalhost]);
 
-  // 3. Strict 403 Barrier for admin.enfuture.uz without auth
-  if (isAdminDomain && (!isAuthenticated || user?.email.toLowerCase() !== ADMIN_EMAIL)) {
+  // 3. Strict 403 Barrier for SUBDOMAINS without auth
+  const isInvalidAdmin = isAdminDomain && (!isAuthenticated || user?.email.toLowerCase() !== ADMIN_EMAIL);
+  const isInvalidUser = isUserDomain && (!isAuthenticated || user?.email.toLowerCase() === ADMIN_EMAIL);
+
+  if (isInvalidAdmin || isInvalidUser) {
     return (
       <div className="min-h-screen w-full flex flex-col items-center justify-center bg-[#0a0a0a] text-white p-6 font-mono selection:bg-rose-500/30">
         <div className="max-w-md w-full border border-rose-500/20 bg-rose-500/5 p-8 rounded-2xl shadow-[0_0_40px_rgba(225,29,72,0.1)] text-center relative overflow-hidden">
@@ -86,17 +91,19 @@ const DomainManager = ({ children }: { children: React.ReactNode }) => {
               <span className="text-3xl">🚫</span>
             </div>
           </div>
-          <h1 className="text-4xl font-black mb-2 text-rose-500 tracking-wider">403</h1>
-          <h2 className="text-xl font-bold mb-4 text-rose-100">ACCESS DENIED</h2>
+          <h1 className="text-4xl font-black mb-2 text-rose-500 tracking-wider">XATOLIK 403</h1>
+          <h2 className="text-xl font-bold mb-4 text-rose-100">KIRISH TAQIQLANGAN</h2>
           <p className="text-sm text-rose-200/60 mb-6 leading-relaxed">
-            Sizda ushbu server yoki katalogga kirish ruxsati yo'q. Faqatgina platforma ma'murlari tasdiqlangan qurilmalar orqali kira oladi.
+            {isInvalidAdmin 
+              ? "Sizda ma'murlar serveriga kirish ruxsati yo'q. Qat'iy taqiqlanadi." 
+              : "Subdomenga to'g'ridan to'g'ri kirish taqiqlangan. Tizim avval asosiy saytdan ro'yxatdan o'tishingizni so'raydi."}
           </p>
           <div className="space-y-4">
             <button 
               onClick={() => window.location.href = 'https://www.enfuture.uz'}
               className="text-xs uppercase tracking-widest font-bold text-rose-400 hover:text-rose-300 transition-colors border border-rose-500/20 hover:border-rose-500/40 hover:bg-rose-500/10 px-6 py-3 rounded-xl w-full"
             >
-              ASOSIY SAHIFA
+              ASOSIY SAHIFA (ENFUTURE.UZ)
             </button>
           </div>
         </div>
