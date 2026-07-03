@@ -1,4 +1,4 @@
-import { Suspense, useEffect } from 'react';
+import React, { Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { HomePage } from '@/Home';
 import { DashboardLayout } from '@/DashboardLayout';
@@ -26,12 +26,16 @@ const DomainManager = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
   const pathname = location.pathname;
   const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+  
+  // Track if we've just handled a sync_token
+  const [hasSyncToken, setHasSyncToken] = React.useState(false);
 
   // 1. Handle incoming sync token and logout parameter
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const syncToken = params.get('sync_token');
     const isLogout = params.get('logout');
+    const currentHostname = window.location.hostname;
 
     if (isLogout) {
       useUserStore.getState().logout();
@@ -49,12 +53,16 @@ const DomainManager = ({ children }: { children: React.ReactNode }) => {
 
         if (decoded && decoded.user) {
           useUserStore.setState({ user: decoded.user, isAuthenticated: true });
+          setHasSyncToken(true);
         }
         // Remove token from URL
         window.history.replaceState({}, document.title, window.location.pathname);
       } catch (e) {
         console.error('Failed to sync session data:', e);
       }
+    } else if (currentHostname === LOGIN_DOMAIN) {
+      // If on login.enfuture.uz without a sync token, clear any existing user state!
+      useUserStore.getState().logout();
     }
 
     // Always clear logging out flag when starting
@@ -94,19 +102,22 @@ const DomainManager = ({ children }: { children: React.ReactNode }) => {
     const base64Str = btoa(unescape(encodeURIComponent(jsonString)));
     const syncPayload = encodeURIComponent(base64Str);
 
+    // Only redirect from login.enfuture.uz if we just had a sync_token!
+    const shouldRedirectFromLoginDomain = isLoginDomain && hasSyncToken;
+
     if (isAdminEmail) {
       // Admin bitta ro'yxatdan o'tdimi yo logindan kirdimi srazu o'zini joyiga uchadi:
-      if (!isAdminDomain && (pathname.startsWith('/admin') || isLoginDomain || pathname.startsWith('/dashboard') || pathname === '/login' || pathname === '/register')) {
+      if (!isAdminDomain && (pathname.startsWith('/admin') || shouldRedirectFromLoginDomain || pathname.startsWith('/dashboard') || pathname === '/login' || pathname === '/register')) {
         window.location.replace(`https://${ADMIN_DOMAIN}/admin?sync_token=${syncPayload}`);
       }
     } else {
       // Oddiy User logindan kirdimi o'zining joyiga uchadi:
-      if (!isUserDomain && (pathname.startsWith('/dashboard') || pathname.startsWith('/courses') || pathname.startsWith('/ai-tutor') || pathname.startsWith('/profile') || isLoginDomain || pathname === '/login' || pathname === '/register')) {
+      if (!isUserDomain && (pathname.startsWith('/dashboard') || pathname.startsWith('/courses') || pathname.startsWith('/ai-tutor') || pathname.startsWith('/profile') || shouldRedirectFromLoginDomain || pathname === '/login' || pathname === '/register')) {
         const targetPath = (pathname.startsWith('/dashboard') || pathname.startsWith('/courses') || pathname.startsWith('/ai-tutor') || pathname.startsWith('/profile')) ? pathname : '/dashboard';
         window.location.replace(`https://${USER_DOMAIN}${targetPath}?sync_token=${syncPayload}`);
       }
     }
-  }, [isAuthenticated, user, hostname, pathname, isAdminDomain, isUserDomain, isLoginDomain, isMainDomain, isLocalhost]);
+  }, [isAuthenticated, user, hostname, pathname, isAdminDomain, isUserDomain, isLoginDomain, isMainDomain, isLocalhost, hasSyncToken]);
 
   // 3. Strict 403 Barrier for SUBDOMAINS without auth
   const isInvalidAdmin = isAdminDomain && (!isAuthenticated || user?.email.toLowerCase() !== ADMIN_EMAIL);
