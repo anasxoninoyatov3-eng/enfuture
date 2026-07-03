@@ -149,8 +149,7 @@ export const useUserStore = create<UserState>()(
           console.warn('EmailJS keys are missing in .env file! Please set VITE_EMAILJS_SERVICE_ID, VITE_EMAILJS_TEMPLATE_ID, VITE_EMAILJS_PUBLIC_KEY');
         }
 
-        console.log(`📧 OTP for ${email}: ${otp}`); // For dev/demo
-        return { success: true, message: 'OTP yuborildi', otp };
+      return { success: true, message: 'OTP yuborildi', otp };
       },
 
       verifyOtpAndRegister: (email, otp) => {
@@ -254,7 +253,6 @@ export const useUserStore = create<UserState>()(
           }
         }
 
-        console.log(`📧 Login OTP for ${email}: ${otp}`);
         return { success: true, message: 'OTP yuborildi', otp };
       },
 

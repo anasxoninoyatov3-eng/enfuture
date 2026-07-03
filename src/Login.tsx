@@ -26,7 +26,6 @@ export const LoginPage = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const [displayOtp, setDisplayOtp] = useState<string | null>(null);
 
   const onGoogleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
@@ -63,11 +62,6 @@ export const LoginPage = () => {
     if (!result.success) {
       setError(result.message);
       return;
-    }
-
-    if (result.otp) {
-      setDisplayOtp(result.otp);
-      // Don't hide OTP automatically for testing
     }
     
     if (step === 'email') {
@@ -199,16 +193,10 @@ export const LoginPage = () => {
                     <div className="w-16 h-16 rounded-2xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center mx-auto mb-4">
                       <Mail className="h-8 w-8 text-indigo-600" />
                     </div>
-                    <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-1">OTP Kodni kiriting</h2>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
-                      <span className="font-bold text-slate-700 dark:text-slate-300">{email}</span> ga kod yuborildi
-                    </p>
-                    {displayOtp && (
-                      <div className="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl">
-                        <p className="text-sm font-semibold text-yellow-700 dark:text-yellow-300 mb-2">Test uchun OTP kod (10 soniya davomida ko'rinadi):</p>
-                        <p className="text-2xl font-black tracking-widest text-yellow-600 dark:text-yellow-400">{displayOtp}</p>
-                      </div>
-                    )}
+                    <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-1">OTP Kodini kiriting</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              <span className="font-bold text-slate-700 dark:text-slate-300">{email}</span> ga kod yuborildi
+            </p>
                   </div>
 
                   <div>
