@@ -48,9 +48,11 @@ export const LoginPage = () => {
 
   const handleSendOtp = async () => {
     setError('');
-    if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setError('To\'g\'ri email manzil kiriting');
-      return;
+    if (step === 'email') {
+      if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        setError('To\'g\'ri email manzil kiriting');
+        return;
+      }
     }
 
     setLoading(true);
@@ -65,11 +67,12 @@ export const LoginPage = () => {
 
     if (result.otp) {
       setDisplayOtp(result.otp);
-      // Hide OTP after 10 seconds
-      setTimeout(() => setDisplayOtp(null), 10000);
+      // Don't hide OTP automatically for testing
     }
     
-    setStep('otp');
+    if (step === 'email') {
+      setStep('otp');
+    }
   };
 
   const handleVerifyOtp = async () => {
@@ -243,13 +246,24 @@ export const LoginPage = () => {
                     )}
                   </button>
 
-                  <button
-                    type="button"
-                    onClick={() => { setStep('email'); setError(''); setOtp(''); }}
-                    className="w-full text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 font-medium transition-colors"
-                  >
-                    ← Orqaga qaytish
-                  </button>
+                  <div className="flex flex-col gap-3">
+                    <button
+                      type="button"
+                      onClick={handleSendOtp}
+                      disabled={loading}
+                      className="w-full py-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-60"
+                    >
+                      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                      {loading ? 'Qayta yuborilmoqda...' : 'Kodni qayta yuborish'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setStep('email'); setError(''); setOtp(''); }}
+                      className="w-full text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 font-medium transition-colors"
+                    >
+                      ← Orqaga qaytish
+                    </button>
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>

@@ -64,13 +64,15 @@ export const RegisterPage = () => {
 
   const handleSendOtp = async () => {
     setError('');
-    if (!firstName.trim() || !lastName.trim() || !email.trim()) {
-      setError('Barcha maydonlarni to\'ldiring');
-      return;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setError('Email manzil noto\'g\'ri');
-      return;
+    if (step === 'info') {
+      if (!firstName.trim() || !lastName.trim() || !email.trim()) {
+        setError('Barcha maydonlarni to\'ldiring');
+        return;
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        setError('Email manzil noto\'g\'ri');
+        return;
+      }
     }
 
     setLoading(true);
@@ -85,11 +87,12 @@ export const RegisterPage = () => {
 
     if (result.otp) {
       setDisplayOtp(result.otp);
-      // Hide OTP after 10 seconds
-      setTimeout(() => setDisplayOtp(null), 10000);
+      // Don't hide OTP automatically for testing
     }
     
-    setStep('otp');
+    if (step === 'info') {
+      setStep('otp');
+    }
   };
 
   const handleVerifyOtp = async () => {
@@ -357,13 +360,24 @@ export const RegisterPage = () => {
                     )}
                   </button>
 
-                  <button
-                    type="button"
-                    onClick={() => { setStep('info'); setError(''); setOtp(''); }}
-                    className="w-full text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 font-medium transition-colors"
-                  >
-                    ← Orqaga qaytish
-                  </button>
+                  <div className="flex flex-col gap-3">
+                    <button
+                      type="button"
+                      onClick={handleSendOtp}
+                      disabled={loading}
+                      className="w-full py-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-60"
+                    >
+                      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                      {loading ? 'Qayta yuborilmoqda...' : 'Kodni qayta yuborish'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setStep('info'); setError(''); setOtp(''); }}
+                      className="w-full text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 font-medium transition-colors"
+                    >
+                      ← Orqaga qaytish
+                    </button>
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
