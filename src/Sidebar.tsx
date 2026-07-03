@@ -1,4 +1,4 @@
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutGrid, BookOpen, Sparkles, Trophy, LogOut, ChevronLeft, ChevronRight, Shield, User
 } from 'lucide-react';
@@ -17,14 +17,14 @@ const navItems = [
 
 export const Sidebar = () => {
   const location = useLocation();
-  const navigate = useNavigate();
   const { isSidebarCollapsed, toggleSidebar, isMobileMenuOpen, setMobileMenuOpen } = useUiStore();
   const { user, logout } = useUserStore();
 
   const handleLogout = () => {
-    logout();
     setMobileMenuOpen(false);
-    navigate('/');
+    sessionStorage.setItem('logging_out', '1');
+    logout();
+    window.location.assign('https://login.enfuture.uz/login?logout=1');
   };
 
   const SidebarContent = (

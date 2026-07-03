@@ -27,10 +27,17 @@ const DomainManager = ({ children }: { children: React.ReactNode }) => {
   const pathname = location.pathname;
   const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
 
-  // 1. Handle incoming sync token
+  // 1. Handle incoming sync token and logout parameter
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const syncToken = params.get('sync_token');
+    const isLogout = params.get('logout');
+
+    if (isLogout) {
+      useUserStore.getState().logout();
+      window.history.replaceState({}, document.title, window.location.pathname);
+      return;
+    }
 
     if (syncToken) {
       try {
@@ -48,6 +55,9 @@ const DomainManager = ({ children }: { children: React.ReactNode }) => {
         console.error('Failed to sync session data:', e);
       }
     }
+
+    // Always clear logging out flag when starting
+    sessionStorage.removeItem('logging_out');
   }, []);
 
   // 2. Routing logic based on domain
@@ -67,7 +77,7 @@ const DomainManager = ({ children }: { children: React.ReactNode }) => {
         window.location.replace(`https://${LOGIN_DOMAIN}${pathname}`);
       }
       // Login domenida shunchaki / bo'lib tursa ham login o'ziga yuboramiz
-      if (isLoginDomain && pathname === '/') {
+      else if (isLoginDomain && pathname === '/') {
         window.location.replace(`https://${LOGIN_DOMAIN}/login`);
       }
       return;
@@ -97,8 +107,9 @@ const DomainManager = ({ children }: { children: React.ReactNode }) => {
   // 3. Strict 403 Barrier for SUBDOMAINS without auth
   const isInvalidAdmin = isAdminDomain && (!isAuthenticated || user?.email.toLowerCase() !== ADMIN_EMAIL);
   const isInvalidUser = isUserDomain && (!isAuthenticated || user?.email.toLowerCase() === ADMIN_EMAIL);
+  const isLoggingOut = sessionStorage.getItem('logging_out') === '1';
 
-  if (isInvalidAdmin || isInvalidUser) {
+  if ((isInvalidAdmin || isInvalidUser) && !isLoggingOut) {
     return (
       <div className="min-h-screen w-full flex flex-col items-center justify-center bg-[#0a0a0a] text-white p-6 font-mono selection:bg-rose-500/30">
         <div className="max-w-md w-full border border-rose-500/20 bg-rose-500/5 p-8 rounded-2xl shadow-[0_0_40px_rgba(225,29,72,0.1)] text-center relative overflow-hidden">

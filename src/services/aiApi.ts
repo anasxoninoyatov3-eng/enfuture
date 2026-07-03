@@ -116,14 +116,43 @@ export async function createLesson(
     console.warn('createLesson API unavailable, using direct fallback', e);
   }
 
-  const langName = language === 'RU' ? 'Russian' : 'Uzbek';
-  const systemInstruction = getLessonSystemInstruction(language);
-  const userPrompt = `Topic: "${topic}", Level: "${level}", Goal: "${goal}", Support Language: "${langName}"`;
-  const text = await callGroqDirect(systemInstruction, userPrompt, true);
-  const parsed = parseJsonLoose<GeneratedLesson>(text);
+  try {
+    const langName = language === 'RU' ? 'Russian' : 'Uzbek';
+    const systemInstruction = getLessonSystemInstruction(language);
+    const userPrompt = `Topic: "${topic}", Level: "${level}", Goal: "${goal}", Support Language: "${langName}"`;
+    const text = await callGroqDirect(systemInstruction, userPrompt, true);
+    const parsed = parseJsonLoose<GeneratedLesson>(text);
+  
+    if (parsed?.sections?.length) return parsed;
+  } catch (err) {
+    console.error('Groq AI API failed for lesson', err);
+  }
 
-  if (parsed?.sections?.length) return parsed;
-  throw new Error('Dars ma\'lumotlarini tahlil qilib bo\'lmadi');
+  // Fallback if all APIs fail (ensures the error is NEVER shown to the user)
+  return {
+    topic: topic || 'English Topic',
+    level: (level as any) || 'A1',
+    goal,
+    sections: [
+      {
+        title: language === 'RU' ? 'Введение' : 'Kirish',
+        content: language === 'RU' 
+          ? `Это резервный урок для темы **${topic}**. Мы временно не смогли подключиться к ИИ-серверу для генерации полного урока. Пожалуйста, проверьте настройки API.` 
+          : `Bu **${topic}** mavzusi uchun zaxira (vaqtinchalik) dars oynasi. Sun'iy intellekt serveriga vaqtincha ulana olmadik. API kalitlarini yoki internetni tekshiring.`,
+        type: 'concept'
+      },
+      {
+        title: language === 'RU' ? 'Примеры' : 'Misollar',
+        content: `- Example one for ${topic}\n- Example two for ${topic}`,
+        type: 'example'
+      }
+    ],
+    vocabulary: [
+      { term: 'Fallback', definition: language === 'RU' ? 'Резервный вариант' : 'Zaxira varianti' },
+      { term: 'Error', definition: language === 'RU' ? 'Ошибка' : 'Xatolik' }
+    ],
+    sources: ['System Fallback']
+  };
 }
 
 export async function createQuiz(
@@ -153,11 +182,29 @@ Level: "${level}", Language: "${langName}". Generate exactly 5 questions that te
     console.warn('generateContent API unavailable, using direct fallback', e);
   }
 
-  const text = await callGroqDirect(systemInstruction, userPrompt, true);
-  const parsed = parseJsonLoose<GeneratedQuiz>(text);
+  try {
+    const text = await callGroqDirect(systemInstruction, userPrompt, true);
+    const parsed = parseJsonLoose<GeneratedQuiz>(text);
+  
+    if (parsed?.questions?.length) return parsed;
+  } catch (err) {
+    console.error('Groq AI API failed for quiz', err);
+  }
 
-  if (parsed?.questions?.length) return parsed;
-  throw new Error('Test ma\'lumotlarini tahlil qilib bo\'lmadi');
+  // Fallback Quiz if API fails
+  return {
+    topic: topic,
+    questions: [
+      {
+        question: language === 'RU' 
+          ? `Резервный вопрос для темы ${topic}. (ИИ сервер недоступен)` 
+          : `${topic} bo'yicha zaxira savol. (AI server ishlamayapti)`,
+        options: ['A', 'B', 'C', 'D'],
+        correctIndex: 0,
+        explanation: 'Server bilan bog\'lanishda kichik muammo yuzaga keldi.'
+      }
+    ]
+  };
 }
 
 export async function generateContent(
