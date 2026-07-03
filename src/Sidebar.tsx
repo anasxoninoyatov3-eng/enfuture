@@ -24,7 +24,11 @@ export const Sidebar = () => {
     setMobileMenuOpen(false);
     sessionStorage.setItem('logging_out', '1');
     logout();
-    window.location.assign('https://login.enfuture.uz/login?logout=1');
+    
+    // Chain redirect to clear state on ALL subdomains
+    const finalDest = encodeURIComponent('https://login.enfuture.uz/login');
+    const mainDomainClear = encodeURIComponent(`https://enfuture.uz/?logout=1&redirect=${finalDest}`);
+    window.location.assign(`https://login.enfuture.uz/login?logout=1&redirect=${mainDomainClear}`);
   };
 
   const SidebarContent = (

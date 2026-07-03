@@ -32,10 +32,15 @@ const DomainManager = ({ children }: { children: React.ReactNode }) => {
     const params = new URLSearchParams(window.location.search);
     const syncToken = params.get('sync_token');
     const isLogout = params.get('logout');
+    const redirectUrl = params.get('redirect');
 
     if (isLogout) {
       useUserStore.getState().logout();
-      window.history.replaceState({}, document.title, window.location.pathname);
+      if (redirectUrl) {
+        window.location.replace(redirectUrl);
+      } else {
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
       return;
     }
 
