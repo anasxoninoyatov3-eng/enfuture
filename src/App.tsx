@@ -32,15 +32,11 @@ const DomainManager = ({ children }: { children: React.ReactNode }) => {
     const params = new URLSearchParams(window.location.search);
     const syncToken = params.get('sync_token');
     const isLogout = params.get('logout');
-    const redirectUrl = params.get('redirect');
 
     if (isLogout) {
       useUserStore.getState().logout();
-      if (redirectUrl) {
-        window.location.replace(redirectUrl);
-      } else {
-        window.history.replaceState({}, document.title, window.location.pathname);
-      }
+      // Clear the URL
+      window.history.replaceState({}, document.title, window.location.pathname);
       return;
     }
 
@@ -75,9 +71,9 @@ const DomainManager = ({ children }: { children: React.ReactNode }) => {
     // Prevent accidental redirects if we are currently logging out
     if (window.location.search.includes('logout=')) return;
     
-    // Faqat haqiqiy enfuture.uz domenlaridan kirsagina redirect qilsin. Vercel (.app) yoki local domenda qotib qolmasligi uchun ehtiyot sharti:
-    if (!hostname.includes('enfuture.uz')) return;
+    // Do NOT redirect on localhost or non-enfuture.uz domains
     if (isLocalhost) return;
+    if (!hostname.includes('enfuture.uz')) return;
 
     if (!isAuthenticated || !user) {
       // Login yoki Register ga boshqa domendan kirishsa login.enfuture.uz ga yuboramiz

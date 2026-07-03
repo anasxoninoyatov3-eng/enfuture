@@ -121,12 +121,12 @@ export const HomePage = () => {
             </div>
 
             <div className="flex items-center gap-2 md:gap-6">
-               <Button asChild variant="ghost" className="px-3 md:px-4 font-semibold text-sm text-slate-600 dark:text-slate-300">
-                  <a href="https://login.enfuture.uz/login">Sign In</a>
-               </Button>
-               <Button asChild className="rounded-lg h-9 md:h-10 px-4 md:px-6 text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm">
-                  <a href="https://login.enfuture.uz/register">Get Started</a>
-               </Button>
+              <Button asChild variant="ghost" className="px-3 md:px-4 font-semibold text-sm text-slate-600 dark:text-slate-300">
+                <Link to="/login">Sign In</Link>
+              </Button>
+              <Button asChild className="rounded-lg h-9 md:h-10 px-4 md:px-6 text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm">
+                <Link to="/register">Get Started</Link>
+              </Button>
             </div>
          </nav>
 
@@ -233,14 +233,14 @@ export const HomePage = () => {
                         </p>
 
                         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4 md:pt-8 w-full max-w-md mx-auto">
-                           <Button size="lg" className="h-14 px-8 md:px-10 rounded-lg text-lg font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg group w-full sm:w-auto">
-                              <a href="https://login.enfuture.uz/register" className="flex items-center justify-center gap-2">
-                                 Start Now <ChevronRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                              </a>
-                           </Button>
-                           <Button variant="outline" size="lg" className="h-14 px-8 md:px-10 rounded-lg text-lg font-semibold border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:bg-slate-800 w-full sm:w-auto">
-                              <Link to="/courses">View Courses</Link>
-                           </Button>
+                          <Button asChild size="lg" className="h-14 px-8 md:px-10 rounded-lg text-lg font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg group w-full sm:w-auto">
+                            <Link to="/register" className="flex items-center justify-center gap-2">
+                              Start Now <ChevronRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                            </Link>
+                          </Button>
+                          <Button asChild variant="outline" size="lg" className="h-14 px-8 md:px-10 rounded-lg text-lg font-semibold border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:bg-slate-800 w-full sm:w-auto">
+                            <Link to="/courses">View Courses</Link>
+                          </Button>
                         </div>
 
                         <div className="flex flex-col md:flex-row items-center justify-center gap-4 pt-8 md:pt-12">
@@ -356,9 +356,9 @@ export const HomePage = () => {
                      <span className="text-indigo-600">confidently?</span>
                   </h2>
                   <div className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-4">
-                     <Button size="lg" className="h-18 px-14 rounded-full text-xl font-bold bg-indigo-600 text-white shadow-2xl shadow-indigo-100 hover:bg-indigo-700 w-full sm:w-auto">
-                        <a href="https://login.enfuture.uz/register">Create Your Account</a>
-                     </Button>
+                    <Button asChild size="lg" className="h-18 px-14 rounded-full text-xl font-bold bg-indigo-600 text-white shadow-2xl shadow-indigo-100 hover:bg-indigo-700 w-full sm:w-auto">
+                      <Link to="/register">Create Your Account</Link>
+                    </Button>
                   </div>
                </div>
                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-indigo-50 rounded-full blur-[120px] opacity-30 -z-0" />

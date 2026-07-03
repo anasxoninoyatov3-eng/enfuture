@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { UserProfile, TopicProgress, KnowledgeLevel } from './types';
 
 interface PendingRegistration {
@@ -43,6 +43,8 @@ interface UserState {
 }
 
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
+
+const STORAGE_KEY = 'user-storage';
 
 export const useUserStore = create<UserState>()(
   persist(
@@ -280,9 +282,16 @@ export const useUserStore = create<UserState>()(
         return { success: true, message: 'Muvaffaqiyatli kirdingiz!' };
       },
 
-      logout: () => set({ user: null, isAuthenticated: false }),
+      logout: () => {
+        // Clear localStorage to ensure persisted state is removed
+        localStorage.removeItem(STORAGE_KEY);
+        set({ user: null, isAuthenticated: false, pendingRegistration: null });
+      },
 
-      clearAllUsers: () => set({ allUsers: [], user: null, isAuthenticated: false }),
+      clearAllUsers: () => {
+        localStorage.removeItem(STORAGE_KEY);
+        set({ allUsers: [], user: null, isAuthenticated: false, pendingRegistration: null });
+      },
 
       addXp: (amount) => set((state) => ({
         user: state.user ? { ...state.user, xp: state.user.xp + amount } : null,
@@ -342,7 +351,8 @@ export const useUserStore = create<UserState>()(
       })
     }),
     {
-      name: 'user-storage',
+      name: STORAGE_KEY,
+      storage: createJSONStorage(() => localStorage),
     }
   )
 );
