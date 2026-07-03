@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { Button } from '@/Button';
 import { Card, CardContent } from '@/Card';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -122,10 +121,10 @@ export const HomePage = () => {
 
             <div className="flex items-center gap-2 md:gap-6">
               <Button asChild variant="ghost" className="px-3 md:px-4 font-semibold text-sm text-slate-600 dark:text-slate-300">
-                <Link to="/login">Sign In</Link>
+                <a href="https://login.enfuture.uz/login">Sign In</a>
               </Button>
               <Button asChild className="rounded-lg h-9 md:h-10 px-4 md:px-6 text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm">
-                <Link to="/register">Get Started</Link>
+                <a href="https://login.enfuture.uz/register">Get Started</a>
               </Button>
             </div>
          </nav>
@@ -234,12 +233,12 @@ export const HomePage = () => {
 
                         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4 md:pt-8 w-full max-w-md mx-auto">
                           <Button asChild size="lg" className="h-14 px-8 md:px-10 rounded-lg text-lg font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg group w-full sm:w-auto">
-                            <Link to="/register" className="flex items-center justify-center gap-2">
+                            <a href="https://login.enfuture.uz/register" className="flex items-center justify-center gap-2">
                               Start Now <ChevronRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                            </Link>
+                            </a>
                           </Button>
                           <Button asChild variant="outline" size="lg" className="h-14 px-8 md:px-10 rounded-lg text-lg font-semibold border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:bg-slate-800 w-full sm:w-auto">
-                            <Link to="/courses">View Courses</Link>
+                            <a href="https://login.enfuture.uz/register">View Courses</a>
                           </Button>
                         </div>
 
@@ -357,7 +356,7 @@ export const HomePage = () => {
                   </h2>
                   <div className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-4">
                     <Button asChild size="lg" className="h-18 px-14 rounded-full text-xl font-bold bg-indigo-600 text-white shadow-2xl shadow-indigo-100 hover:bg-indigo-700 w-full sm:w-auto">
-                      <Link to="/register">Create Your Account</Link>
+                      <a href="https://login.enfuture.uz/register">Create Your Account</a>
                     </Button>
                   </div>
                </div>
