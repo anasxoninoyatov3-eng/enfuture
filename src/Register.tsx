@@ -40,6 +40,7 @@ export const RegisterPage = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [displayOtp, setDisplayOtp] = useState<string | null>(null);
 
   const onGoogleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
@@ -82,6 +83,12 @@ export const RegisterPage = () => {
       return;
     }
 
+    if (result.otp) {
+      setDisplayOtp(result.otp);
+      // Hide OTP after 10 seconds
+      setTimeout(() => setDisplayOtp(null), 10000);
+    }
+    
     setStep('otp');
   };
 
@@ -307,6 +314,12 @@ export const RegisterPage = () => {
                     <p className="text-sm text-slate-500 dark:text-slate-400">
                       <span className="font-bold text-slate-700 dark:text-slate-300">{email}</span> manziliga 6 xonali kod yuborildi
                     </p>
+                    {displayOtp && (
+                      <div className="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl">
+                        <p className="text-sm font-semibold text-yellow-700 dark:text-yellow-300 mb-2">Test uchun OTP kod (10 soniya davomida ko'rinadi):</p>
+                        <p className="text-2xl font-black tracking-widest text-yellow-600 dark:text-yellow-400">{displayOtp}</p>
+                      </div>
+                    )}
                   </div>
 
                   {/* OTP inputs */}

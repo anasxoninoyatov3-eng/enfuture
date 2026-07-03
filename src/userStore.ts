@@ -119,7 +119,14 @@ export const useUserStore = create<UserState>()(
         const templateId = (import.meta as any).env.VITE_EMAILJS_TEMPLATE_ID;
         const publicKey = (import.meta as any).env.VITE_EMAILJS_PUBLIC_KEY;
 
+        console.log('EmailJS env vars:', {
+          serviceId: serviceId ? 'set' : 'NOT SET',
+          templateId: templateId ? 'set' : 'NOT SET',
+          publicKey: publicKey ? 'set' : 'NOT SET'
+        });
+
         if (serviceId && templateId && publicKey) {
+          console.log('Sending EmailJS request...');
           fetch('https://api.emailjs.com/api/v1.0/email/send', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -134,12 +141,19 @@ export const useUserStore = create<UserState>()(
                 message: `Sizning tasdiqlash kodingiz (OTP): ${otp}`
               }
             })
-          }).then(res => {
-            if (res.ok) console.log(`📧 Email sent successfully to ${email}`);
-            else console.error("EmailJS Error", res);
-          }).catch(err => console.error("EmailJS network error:", err));
+          }).then(async res => {
+            console.log('EmailJS response status:', res.status, res.statusText);
+            if (res.ok) {
+              console.log(`📧 Email sent successfully to ${email}`);
+            } else {
+              const text = await res.text();
+              console.error("EmailJS Error response:", text);
+            }
+          }).catch(err => {
+            console.error("EmailJS network error:", err);
+          });
         } else {
-          console.warn('EmailJS keys are missing in .env file!');
+          console.warn('EmailJS keys are missing in .env file! Please set VITE_EMAILJS_SERVICE_ID, VITE_EMAILJS_TEMPLATE_ID, VITE_EMAILJS_PUBLIC_KEY');
         }
 
         console.log(`📧 OTP for ${email}: ${otp}`); // For dev/demo
@@ -220,7 +234,14 @@ export const useUserStore = create<UserState>()(
         const templateId = (import.meta as any).env.VITE_EMAILJS_TEMPLATE_ID;
         const publicKey = (import.meta as any).env.VITE_EMAILJS_PUBLIC_KEY;
 
+        console.log('EmailJS env vars (login):', {
+          serviceId: serviceId ? 'set' : 'NOT SET',
+          templateId: templateId ? 'set' : 'NOT SET',
+          publicKey: publicKey ? 'set' : 'NOT SET'
+        });
+
         if (serviceId && templateId && publicKey) {
+          console.log('Sending EmailJS login request...');
           fetch('https://api.emailjs.com/api/v1.0/email/send', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -235,10 +256,17 @@ export const useUserStore = create<UserState>()(
                 message: `Sizning tizimga kirish kodingiz (OTP): ${otp}`
               }
             })
-          }).then(res => {
-            if (res.ok) console.log(`📧 Login Email sent successfully to ${email}`);
-            else console.error("EmailJS Error", res);
-          }).catch(err => console.error("EmailJS network error:", err));
+          }).then(async res => {
+            console.log('EmailJS login response status:', res.status, res.statusText);
+            if (res.ok) {
+              console.log(`📧 Login Email sent successfully to ${email}`);
+            } else {
+              const text = await res.text();
+              console.error("EmailJS login Error response:", text);
+            }
+          }).catch(err => {
+            console.error("EmailJS login network error:", err);
+          });
         }
 
         console.log(`📧 Login OTP for ${email}: ${otp}`);
