@@ -77,7 +77,7 @@ export const RegisterPage = () => {
 
     setLoading(true);
     await new Promise(r => setTimeout(r, 800));
-    const result = registerWithEmail(firstName.trim(), lastName.trim(), email.trim(), selectedLevel);
+    const result = await registerWithEmail(firstName.trim(), lastName.trim(), email.trim(), selectedLevel);
     setLoading(false);
 
     if (!result.success) {

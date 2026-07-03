@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import emailjs from '@emailjs/browser';
 import { UserProfile, TopicProgress, KnowledgeLevel } from './types';
 
 interface PendingRegistration {
@@ -29,9 +30,9 @@ interface UserState {
 
   // Auth
   syncGoogleUser: (userInfo: any) => void;
-  registerWithEmail: (firstName: string, lastName: string, email: string, level: KnowledgeLevel) => { success: boolean; message: string; otp?: string };
+  registerWithEmail: (firstName: string, lastName: string, email: string, level: KnowledgeLevel) => Promise<{ success: boolean; message: string; otp?: string }>;
   verifyOtpAndRegister: (email: string, otp: string) => { success: boolean; message: string };
-  loginWithEmail: (email: string) => { success: boolean; message: string; otp?: string };
+  loginWithEmail: (email: string) => Promise<{ success: boolean; message: string; otp?: string }>;
   verifyLoginOtp: (email: string, otp: string) => { success: boolean; message: string };
   logout: () => void;
 
@@ -100,7 +101,7 @@ export const useUserStore = create<UserState>()(
         });
       },
 
-      registerWithEmail: (firstName, lastName, email, level) => {
+      registerWithEmail: async (firstName, lastName, email, level) => {
         const state = get();
         const existing = state.allUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
         if (existing) {
@@ -126,32 +127,24 @@ export const useUserStore = create<UserState>()(
         });
 
         if (serviceId && templateId && publicKey) {
-          console.log('Sending EmailJS request...');
-          fetch('https://api.emailjs.com/api/v1.0/email/send', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              service_id: serviceId,
-              template_id: templateId,
-              user_id: publicKey,
-              template_params: {
+          try {
+            console.log('Sending EmailJS request...');
+            await emailjs.send(
+              serviceId,
+              templateId,
+              {
                 to_email: email,
                 to_name: `${firstName} ${lastName}`,
                 otp_code: otp,
                 message: `Sizning tasdiqlash kodingiz (OTP): ${otp}`
-              }
-            })
-          }).then(async res => {
-            console.log('EmailJS response status:', res.status, res.statusText);
-            if (res.ok) {
-              console.log(`📧 Email sent successfully to ${email}`);
-            } else {
-              const text = await res.text();
-              console.error("EmailJS Error response:", text);
-            }
-          }).catch(err => {
-            console.error("EmailJS network error:", err);
-          });
+              },
+              publicKey
+            );
+            console.log(`📧 Email sent successfully to ${email}`);
+          } catch (err) {
+            console.error("EmailJS error:", err);
+            // We still return success with OTP so the user can test even if email fails
+          }
         } else {
           console.warn('EmailJS keys are missing in .env file! Please set VITE_EMAILJS_SERVICE_ID, VITE_EMAILJS_TEMPLATE_ID, VITE_EMAILJS_PUBLIC_KEY');
         }
@@ -208,7 +201,7 @@ export const useUserStore = create<UserState>()(
         return { success: true, message: 'Muvaffaqiyatli ro\'yxatdan o\'tdingiz!' };
       },
 
-      loginWithEmail: (email) => {
+      loginWithEmail: async (email) => {
         const state = get();
         const existingUser = state.allUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
 
@@ -241,32 +234,24 @@ export const useUserStore = create<UserState>()(
         });
 
         if (serviceId && templateId && publicKey) {
-          console.log('Sending EmailJS login request...');
-          fetch('https://api.emailjs.com/api/v1.0/email/send', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              service_id: serviceId,
-              template_id: templateId,
-              user_id: publicKey,
-              template_params: {
+          try {
+            console.log('Sending EmailJS login request...');
+            await emailjs.send(
+              serviceId,
+              templateId,
+              {
                 to_email: email,
                 to_name: `${existingUser.firstName} ${existingUser.lastName}`,
                 otp_code: otp,
                 message: `Sizning tizimga kirish kodingiz (OTP): ${otp}`
-              }
-            })
-          }).then(async res => {
-            console.log('EmailJS login response status:', res.status, res.statusText);
-            if (res.ok) {
-              console.log(`📧 Login Email sent successfully to ${email}`);
-            } else {
-              const text = await res.text();
-              console.error("EmailJS login Error response:", text);
-            }
-          }).catch(err => {
-            console.error("EmailJS login network error:", err);
-          });
+              },
+              publicKey
+            );
+            console.log(`📧 Login Email sent successfully to ${email}`);
+          } catch (err) {
+            console.error("EmailJS login error:", err);
+            // We still return success with OTP so the user can test even if email fails
+          }
         }
 
         console.log(`📧 Login OTP for ${email}: ${otp}`);

@@ -57,7 +57,7 @@ export const LoginPage = () => {
 
     setLoading(true);
     await new Promise(r => setTimeout(r, 600));
-    const result = loginWithEmail(email.trim());
+    const result = await loginWithEmail(email.trim());
     setLoading(false);
 
     if (!result.success) {
