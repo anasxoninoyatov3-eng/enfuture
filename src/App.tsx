@@ -50,7 +50,7 @@ const DomainManager = ({ children }: { children: React.ReactNode }) => {
         const base64Str = syncToken;
         const jsonString = decodeURIComponent(escape(atob(base64Str)));
         const decoded = JSON.parse(jsonString);
-        
+
         if (decoded && decoded.user) {
           useUserStore.setState({ user: decoded.user, isAuthenticated: true });
         }
@@ -89,7 +89,7 @@ const DomainManager = ({ children }: { children: React.ReactNode }) => {
     }
 
     const isAdminEmail = user.email.toLowerCase() === ADMIN_EMAIL;
-    
+
     // Safe encoding for base64 with unicode and URL-safe characters
     const jsonString = JSON.stringify({ user });
     const base64Str = btoa(unescape(encodeURIComponent(jsonString)));
