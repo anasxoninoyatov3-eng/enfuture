@@ -72,6 +72,9 @@ const DomainManager = ({ children }: { children: React.ReactNode }) => {
   const isMainDomain = !isAdminDomain && !isUserDomain && !isLoginDomain;
 
   useEffect(() => {
+    // Prevent accidental redirects if we are currently logging out
+    if (window.location.search.includes('logout=')) return;
+    
     // Faqat haqiqiy enfuture.uz domenlaridan kirsagina redirect qilsin. Vercel (.app) yoki local domenda qotib qolmasligi uchun ehtiyot sharti:
     if (!hostname.includes('enfuture.uz')) return;
     if (isLocalhost) return;
