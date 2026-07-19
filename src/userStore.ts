@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import emailjs from '@emailjs/browser';
 import { UserProfile, TopicProgress, KnowledgeLevel } from './types';
+import { db } from './firebase';
+import { collection, doc, setDoc, addDoc, getDoc } from 'firebase/firestore';
 
 interface PendingRegistration {
   firstName: string;
@@ -31,11 +33,10 @@ interface UserState {
   // Auth
   syncGoogleUser: (userInfo: any) => void;
   registerWithEmail: (firstName: string, lastName: string, email: string, level: KnowledgeLevel) => Promise<{ success: boolean; message: string; otp?: string }>;
-  verifyOtpAndRegister: (email: string, otp: string) => { success: boolean; message: string };
+  verifyOtpAndRegister: (email: string, otp: string) => Promise<{ success: boolean; message: string }>;
   loginWithEmail: (email: string) => Promise<{ success: boolean; message: string; otp?: string }>;
-  verifyLoginOtp: (email: string, otp: string) => { success: boolean; message: string };
+  verifyLoginOtp: (email: string, otp: string) => Promise<{ success: boolean; message: string }>;
   logout: () => void;
-
   // Progress
   addXp: (amount: number) => void;
   updateTopicProgress: (topic: string, level: KnowledgeLevel, score: number, mastered: boolean) => void;
@@ -153,7 +154,7 @@ export const useUserStore = create<UserState>()(
       return { success: true, message: 'OTP yuborildi', otp };
       },
 
-      verifyOtpAndRegister: (email, otp) => {
+      verifyOtpAndRegister: async (email, otp) => {
         const state = get();
         const pending = state.pendingRegistration;
 
@@ -189,6 +190,30 @@ export const useUserStore = create<UserState>()(
           name: `${pending.firstName} ${pending.lastName}`,
           timestamp: new Date().toISOString()
         };
+
+        // Sync to Firestore details for Admin panel access
+        try {
+          await setDoc(doc(db, 'users', newUser.id), {
+            uid: newUser.id,
+            email: newUser.email,
+            displayName: `${newUser.firstName} ${newUser.lastName}`,
+            photoURL: '',
+            lastLogin: newUser.joinDate,
+            xp: newUser.xp,
+            currentLevel: newUser.currentLevel,
+            joinDate: newUser.joinDate,
+            isGoogle: false
+          });
+
+          await addDoc(collection(db, 'audit_logs'), {
+            type: 'register',
+            email: newUser.email,
+            name: `${newUser.firstName} ${newUser.lastName}`,
+            timestamp: newAudit.timestamp
+          });
+        } catch (err) {
+          console.error("Firestore Error in verifyOtpAndRegister:", err);
+        }
 
         set((state) => ({
           allUsers: [...state.allUsers, newUser],
@@ -258,7 +283,7 @@ export const useUserStore = create<UserState>()(
         return { success: true, message: 'OTP yuborildi', otp };
       },
 
-      verifyLoginOtp: (email, otp) => {
+      verifyLoginOtp: async (email, otp) => {
         const state = get();
         const pending = state.pendingRegistration;
 
@@ -285,6 +310,38 @@ export const useUserStore = create<UserState>()(
           name: `${user.firstName} ${user.lastName}`,
           timestamp: new Date().toISOString()
         };
+
+        // Sync to Firestore for Admin panel access
+        try {
+          const userRef = doc(db, 'users', user.id);
+          const userDoc = await getDoc(userRef);
+          if (userDoc.exists()) {
+            await setDoc(userRef, {
+              lastLogin: new Date().toISOString()
+            }, { merge: true });
+          } else {
+            await setDoc(userRef, {
+              uid: user.id,
+              email: user.email,
+              displayName: `${user.firstName} ${user.lastName}`,
+              photoURL: '',
+              lastLogin: new Date().toISOString(),
+              xp: user.xp || 0,
+              currentLevel: user.currentLevel || 'A1',
+              joinDate: user.joinDate || new Date().toISOString(),
+              isGoogle: false
+            });
+          }
+
+          await addDoc(collection(db, 'audit_logs'), {
+            type: 'login',
+            email: user.email,
+            name: `${user.firstName} ${user.lastName}`,
+            timestamp: newAudit.timestamp
+          });
+        } catch (err) {
+          console.error("Firestore Error in verifyLoginOtp:", err);
+        }
 
         set((state) => ({
           user,

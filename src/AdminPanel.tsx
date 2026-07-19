@@ -9,17 +9,41 @@ import { db } from '@/firebase';
 import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
 
 export const AdminPanel = () => {
-  const { user, auditLogs } = useUserStore();
+  const { user } = useUserStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'audit' | 'users'>('audit');
   const [googleUsers, setGoogleUsers] = useState<any[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const [firestoreAuditLogs, setFirestoreAuditLogs] = useState<any[]>([]);
+  const [loadingAudit, setLoadingAudit] = useState(false);
 
   useEffect(() => {
-    if (activeTab === 'users' && user?.email === 'dinoyatova21@gmail.com') {
-      loadGoogleUsers();
+    if (user?.email === 'dinoyatova21@gmail.com') {
+      if (activeTab === 'audit') {
+        loadAuditLogs();
+      } else {
+        loadGoogleUsers();
+      }
     }
   }, [activeTab]);
+
+  const loadAuditLogs = async () => {
+    setLoadingAudit(true);
+    try {
+      const querySnapshot = await getDocs(collection(db, 'audit_logs'));
+      const logs: any[] = [];
+      querySnapshot.forEach((doc) => {
+        logs.push({ id: doc.id, ...doc.data() });
+      });
+      // Sort by timestamp desc
+      logs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      setFirestoreAuditLogs(logs);
+    } catch (err) {
+      console.error('Error loading audit logs:', err);
+    } finally {
+      setLoadingAudit(false);
+    }
+  };
 
   const loadGoogleUsers = async () => {
     setLoadingUsers(true);
@@ -55,9 +79,9 @@ export const AdminPanel = () => {
     return <Navigate to="/dashboard" replace />;
   }
 
-  const filteredLogs = (auditLogs || []).filter(log =>
-    log.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    log.email.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredLogs = (firestoreAuditLogs || []).filter(log =>
+    (log.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (log.email || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const filteredUsers = googleUsers.filter(u =>
@@ -78,7 +102,7 @@ export const AdminPanel = () => {
             Admin Authority - admin.enfuture.uz
           </div>
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Boshqaruv Paneli</h1>
-          <p className="text-slate-500 dark:text-slate-400 font-medium">Saytga kirganlar auditi va Google hisoblar nazorati.</p>
+          <p className="text-slate-500 dark:text-slate-400 font-medium">Saytga kirganlar auditi va hisoblar nazorati.</p>
         </div>
       </motion.div>
 
@@ -99,7 +123,7 @@ export const AdminPanel = () => {
             activeTab === 'users' ? "bg-white dark:bg-slate-900 text-indigo-600 border-indigo-600" : "text-slate-500 hover:text-slate-700"
           )}
         >
-          <Users className="h-4 w-4" /> Google Orqali Kirganlar
+          <Users className="h-4 w-4" /> Barcha Foydalanuvchilar
         </button>
       </div>
 
@@ -107,12 +131,12 @@ export const AdminPanel = () => {
         <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-              {activeTab === 'audit' ? 'Audit Loglari' : 'Google Foydalanuvchilar Ro\'yxati'}
+              {activeTab === 'audit' ? 'Audit Loglari' : 'Foydalanuvchilar Ro\'yxati'}
             </h2>
             <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
               {activeTab === 'audit'
                 ? 'Faqat shu "admin" subdomainiga kirgan va registratsiya qilinganlarning harakatlari.'
-                : 'Google orqali avtorizatsiya qilingan foydalanuvchilarni bloklash va boshqarish.'}
+                : 'Tizimda Google yoki Email orqali ro\'yxatdan o\'tgan foydalanuvchilar ro\'yxati.'}
             </p>
           </div>
 
@@ -126,18 +150,41 @@ export const AdminPanel = () => {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full h-10 pl-10 pr-4 rounded-lg bg-slate-50 dark:bg-slate-800 border-none text-sm focus:ring-2 focus:ring-indigo-600 font-medium transition-all"
               />
-            </div>  
+            </div>
             {activeTab === 'audit' && (
-              <button
-                onClick={() => {
-                  if (confirm("Haqiqatan ham barcha audit ma'lumotlarini o'chirib tashlamoqchimisiz?")) {
-                    useUserStore.setState({ auditLogs: [] });
-                  }
-                }}
-                className="h-10 px-4 rounded-lg bg-rose-50 dark:bg-rose-900/20 flex items-center justify-center text-rose-600 hover:bg-rose-100 text-xs font-bold gap-2"
-              >
-                <Trash2 className="h-4 w-4" /> Tozalash
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={loadAuditLogs}
+                  disabled={loadingAudit}
+                  className="h-10 px-4 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-600 hover:bg-indigo-100 text-xs font-bold gap-2"
+                >
+                  <Clock className="h-4 w-4" /> {loadingAudit ? 'Yuklanmoqda...' : 'Yangilash'}
+                </button>
+                <button
+                  onClick={async () => {
+                    if (confirm("Haqiqatan ham barcha audit ma'lumotlarini o'chirib tashlamoqchimisiz?")) {
+                      setLoadingAudit(true);
+                      try {
+                        const { deleteDoc, doc } = await import('firebase/firestore');
+                        const querySnapshot = await getDocs(collection(db, 'audit_logs'));
+                        const deletePromises: Promise<any>[] = [];
+                        querySnapshot.forEach((document) => {
+                          deletePromises.push(deleteDoc(doc(db, 'audit_logs', document.id)));
+                        });
+                        await Promise.all(deletePromises);
+                        setFirestoreAuditLogs([]);
+                      } catch (err) {
+                        console.error('Error clearing audit logs:', err);
+                      } finally {
+                        setLoadingAudit(false);
+                      }
+                    }
+                  }}
+                  className="h-10 px-4 rounded-lg bg-rose-50 dark:bg-rose-900/20 flex items-center justify-center text-rose-600 hover:bg-rose-100 text-xs font-bold gap-2"
+                >
+                  <Trash2 className="h-4 w-4" /> Tozalash
+                </button>
+              </div>
             )}
             {activeTab === 'users' && (
               <button
@@ -163,7 +210,13 @@ export const AdminPanel = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 gap-y-1">
-                {filteredLogs.length === 0 ? (
+                {loadingAudit && firestoreAuditLogs.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="px-6 py-12 text-center text-slate-400">
+                      Yuklanmoqda...
+                    </td>
+                  </tr>
+                ) : filteredLogs.length === 0 ? (
                   <tr>
                     <td colSpan={4} className="px-6 py-12 text-center text-slate-400">
                       Hech qanday audit log topilmadi.
@@ -175,7 +228,7 @@ export const AdminPanel = () => {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-4">
                           <div className="h-10 w-10 rounded-full overflow-hidden bg-indigo-100 text-indigo-600 font-bold shrink-0 flex items-center justify-center">
-                            {log.name[0]}
+                            {log.name ? log.name[0] : '?'}
                           </div>
                           <div>
                             <div className="font-bold text-slate-900 dark:text-white">{log.name}</div>

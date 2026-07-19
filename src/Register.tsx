@@ -44,7 +44,7 @@ export const RegisterPage = () => {
     try {
       const { signInWithPopup } = await import('firebase/auth');
       const { auth, googleProvider, db } = await import('@/firebase');
-      const { doc, getDoc, setDoc } = await import('firebase/firestore');
+      const { doc, getDoc, setDoc, collection, addDoc } = await import('firebase/firestore');
 
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
@@ -73,6 +73,14 @@ export const RegisterPage = () => {
         photoURL: user.photoURL,
         lastLogin: new Date().toISOString()
       }, { merge: true });
+
+      // Log Google Auth action
+      await addDoc(collection(db, 'audit_logs'), {
+        type: userDoc.exists() ? 'login' : 'register',
+        email: user.email,
+        name: user.displayName || user.email,
+        timestamp: new Date().toISOString()
+      });
 
       navigate('/dashboard');
     } catch (err) {
@@ -122,7 +130,7 @@ export const RegisterPage = () => {
 
     setLoading(true);
     await new Promise(r => setTimeout(r, 600));
-    const result = verifyOtpAndRegister(email, otp);
+    const result = await verifyOtpAndRegister(email, otp);
     setLoading(false);
 
     if (!result.success) {
