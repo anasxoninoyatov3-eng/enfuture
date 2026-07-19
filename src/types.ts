@@ -54,4 +54,5 @@ export interface UserProfile {
   currentLevel: KnowledgeLevel;
   topicProgress: TopicProgress[];
   joinDate: string;
+  isBlocked?: boolean;
 }

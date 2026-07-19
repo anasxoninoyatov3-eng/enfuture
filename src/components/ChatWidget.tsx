@@ -2,8 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageSquare, X, Send, Bot, Volume2, VolumeX } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
-import { cn, speakText, VITE_GROQ_API_KEY_CHAT } from '@/utils';
-
+import { cn, speakText } from '@/utils';
 interface Message {
   id: string;
   role: 'user' | 'assistant';
@@ -60,69 +59,39 @@ export const ChatWidget = () => {
     setIsLoading(true);
 
     try {
-      if (!VITE_GROQ_API_KEY_CHAT) throw new Error('API kaliti topilmadi.');
-
       const systemInstruction = `You are Josh, a helpful, friendly and enthusiastic AI assistant and teacher.
 
 LANGUAGE RULES:
-- You can communicate in ANY language requested by the user (Uzbek, Russian, English, Spanish, etc.).
-- Always reply in the same language the user uses, or the language they ask you to use.
+- You can communicate in ANY language requested by the user.
+- Always reply in the same language the user uses.
 - If the user asks for an explanation of a topic, provide it in their language.
 
 CONCISENESS RULES:
-- Keep your explanations very brief and concise. 
-- Use bullet points or short sentences. 
+- Keep your explanations very brief and concise.
+- Use bullet points or short sentences.
 - Only give the most important information.
 - Aim for 1-2 short paragraphs or a few bullet points.
 
 YOUR PERSONALITY:
 - Be warm, encouraging, and patient.
-- Use emojis occasionally to be friendly 😊.
-- If teaching English, gently correct mistakes and provide simple examples.
-- Always encourage the student.`;
+- Use emojis occasionally.
+- Keep responses easy to understand.`;
 
-      const conversationHistory = messages.map(m => ({
-        role: m.role === 'user' ? 'user' : 'assistant',
-        content: m.content
-      }));
+      // We use Gemini API via generateContent
+      // Need to format chat history as text because generateContent uses raw text.
+      const conversationHistory = messages.map(m => `${m.role === 'user' ? 'Student' : 'Josh'}: ${m.content}`).join('\n\n');
+      const userPrompt = `${conversationHistory}\n\nStudent: ${userText}\n\nJosh:`;
 
-      const payload = {
-        model: 'llama-3.3-70b-versatile',
-        messages: [
-          { role: 'system', content: systemInstruction },
-          ...conversationHistory,
-          { role: 'user', content: userText }
-        ],
-        temperature: 0.8,
-        max_tokens: 1000
-      };
-
-      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${VITE_GROQ_API_KEY_CHAT}`
-        },
-        body: JSON.stringify(payload)
-      });
-
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        const errMsg = errData?.error?.message || response.statusText;
-        throw new Error(`${response.status}: ${errMsg}`);
-      }
-
-      const data = await response.json();
-      const output = data?.choices?.[0]?.message?.content || 'Javob kelmadi. Qaytadan urinib ko\'ring.';
+      const { generateContent } = await import('@/services/aiApi');
+      const output = await generateContent(systemInstruction, userPrompt);
 
       const newMsgId = (Date.now() + 1).toString();
       setMessages(prev => [...prev, {
         id: newMsgId,
         role: 'assistant',
-        content: output
+        content: output || 'Kechirasiz, muammo yuz berdi.'
       }]);
 
-      // Auto-speak the response with human-like voice
       if (autoSpeak) {
         setTimeout(() => {
           setSpeakingId(newMsgId);
@@ -132,16 +101,7 @@ YOUR PERSONALITY:
 
     } catch (err: any) {
       console.error(err);
-      let errorMsg = '';
-      const errStr = String(err);
-      
-      if (errStr.includes('API key') || errStr.includes('API_KEY_INVALID')) {
-        errorMsg = '❌ API kalit noto\'g\'ri. .env fayldagi kalitni tekshiring.\n\n❌ API ключ неверный. Проверьте ключ в .env файле.';
-      } else if (errStr.includes('429') || errStr.includes('quota') || errStr.includes('RESOURCE_EXHAUSTED')) {
-        errorMsg = '⏳ Sizning API kalitingiz bepul ishlash limitini tugatgan (Qouta 0). Google AI Studio\'dan yangi kalit oling.\n\n⏳ Ваш API ключ исчерпал лимит запросов. Пожалуйста, получите новый ключ в Google AI Studio.';
-      } else {
-        errorMsg = `⚠️ Xatolik yuz berdi. Qaytadan urinib ko'ring.\n\n⚠️ Произошла ошибка. Попробуйте снова.\n\n(${err.message || errStr})`;
-      }
+      let errorMsg = `⚠️ Xatolik yuz berdi: ${err.message || 'API bilan bog\'lanishda xato'}. API kalitni tekshiring.`;
       
       setMessages(prev => [...prev, {
         id: (Date.now() + 1).toString(),

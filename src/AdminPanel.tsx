@@ -1,17 +1,56 @@
 import { motion } from 'framer-motion';
 import { Card } from '@/Card';
-import { Shield, Activity, Search, Trash2, Clock, MapPin } from 'lucide-react';
+import { Shield, Search, Trash2, Clock, MapPin, Users, Ban, CheckCircle } from 'lucide-react';
 import { useUserStore } from '@/userStore';
 import { Navigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { cn } from '@/utils';
-
+import { db } from '@/firebase';
+import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
 
 export const AdminPanel = () => {
   const { user, auditLogs } = useUserStore();
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<'audit' | 'users'>('audit');
+  const [googleUsers, setGoogleUsers] = useState<any[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
 
-  // Check for admin email (dinoyatova21@gmail.com)
+  useEffect(() => {
+    if (activeTab === 'users' && user?.email === 'dinoyatova21@gmail.com') {
+      loadGoogleUsers();
+    }
+  }, [activeTab]);
+
+  const loadGoogleUsers = async () => {
+    setLoadingUsers(true);
+    try {
+      const querySnapshot = await getDocs(collection(db, 'users'));
+      const users: any[] = [];
+      querySnapshot.forEach((doc) => {
+        users.push({ id: doc.id, ...doc.data() });
+      });
+      setGoogleUsers(users);
+    } catch (err) {
+      console.error('Error loading users:', err);
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  const toggleBlockUser = async (userId: string, currentStatus: boolean) => {
+    if (confirm(`Haqiqatan ham foydalanuvchini ${currentStatus ? 'blokdan chiqarmoqchimisiz?' : 'bloklamoqchimisiz?'}`)) {
+      try {
+        await updateDoc(doc(db, 'users', userId), {
+          isBlocked: !currentStatus
+        });
+        // Update local state
+        setGoogleUsers(googleUsers.map(u => u.id === userId ? { ...u, isBlocked: !currentStatus } : u));
+      } catch (err) {
+        console.error('Error updating completely:', err);
+      }
+    }
+  };
+
   if (user?.email !== 'dinoyatova21@gmail.com') {
     return <Navigate to="/dashboard" replace />;
   }
@@ -19,6 +58,11 @@ export const AdminPanel = () => {
   const filteredLogs = (auditLogs || []).filter(log =>
     log.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     log.email.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const filteredUsers = googleUsers.filter(u =>
+    (u.displayName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (u.email || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -33,40 +77,43 @@ export const AdminPanel = () => {
             <Shield className="h-3 w-3" />
             Admin Authority - admin.enfuture.uz
           </div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Saytga Kirganlar Auditi</h1>
-          <p className="text-slate-500 dark:text-slate-400 font-medium">Faqat ushbu "admin" subdomainiga yo'naltirilgan va kirganlar hisoboti.</p>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Boshqaruv Paneli</h1>
+          <p className="text-slate-500 dark:text-slate-400 font-medium">Saytga kirganlar auditi va Google hisoblar nazorati.</p>
         </div>
       </motion.div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <Card className="p-6 border-slate-200 dark:border-slate-800 shadow-sm rounded-2xl bg-white dark:bg-slate-900 flex items-center gap-4">
-          <div className="h-14 w-14 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
-            <Activity className="h-6 w-6" />
-          </div>
-          <div>
-            <p className="text-sm font-bold text-slate-400 uppercase tracking-wider">Jami Kirishlar</p>
-            <h3 className="text-3xl font-black text-slate-900 dark:text-white">{(auditLogs || []).length}</h3>
-          </div>
-        </Card>
-
-        <Card className="p-6 border-slate-200 dark:border-slate-800 shadow-sm rounded-2xl bg-white dark:bg-slate-900 flex items-center gap-4">
-          <div className="h-14 w-14 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
-            <Clock className="h-6 w-6" />
-          </div>
-          <div>
-            <p className="text-sm font-bold text-slate-400 uppercase tracking-wider">Oxirgi 24 soatda</p>
-            <h3 className="text-3xl font-black text-slate-900 dark:text-white">
-              {(auditLogs || []).filter(l => new Date(l.timestamp).getTime() > Date.now() - 24 * 60 * 60 * 1000).length}
-            </h3>
-          </div>
-        </Card>
+      <div className="flex gap-4 mb-8 border-b border-slate-200 dark:border-slate-800 pb-px">
+        <button
+          onClick={() => setActiveTab('audit')}
+          className={cn(
+            "px-6 py-3 font-bold text-sm rounded-t-xl transition-all border-b-2 border-transparent",
+            activeTab === 'audit' ? "bg-white dark:bg-slate-900 text-indigo-600 border-indigo-600" : "text-slate-500 hover:text-slate-700"
+          )}
+        >
+          Audit Loglari
+        </button>
+        <button
+          onClick={() => setActiveTab('users')}
+          className={cn(
+            "px-6 py-3 font-bold text-sm rounded-t-xl transition-all border-b-2 border-transparent flex items-center gap-2",
+            activeTab === 'users' ? "bg-white dark:bg-slate-900 text-indigo-600 border-indigo-600" : "text-slate-500 hover:text-slate-700"
+          )}
+        >
+          <Users className="h-4 w-4" /> Google Orqali Kirganlar
+        </button>
       </div>
 
       <Card className="border-slate-200 dark:border-slate-800 shadow-sm rounded-2xl bg-white dark:bg-slate-900 overflow-hidden">
         <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Audit Loglari</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Faqat shu "admin" subdomainiga kirgan va ro'yxatdan o'tganlar nazorati.</p>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+              {activeTab === 'audit' ? 'Audit Loglari' : 'Google Foydalanuvchilar Ro\'yxati'}
+            </h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
+              {activeTab === 'audit'
+                ? 'Faqat shu "admin" subdomainiga kirgan va registratsiya qilinganlarning harakatlari.'
+                : 'Google orqali avtorizatsiya qilingan foydalanuvchilarni bloklash va boshqarish.'}
+            </p>
           </div>
 
           <div className="flex items-center gap-3">
@@ -74,84 +121,161 @@ export const AdminPanel = () => {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <input
                 type="text"
-                placeholder="Ism yoki email bo'yicha qidiruv..."
+                placeholder="Ism yoki email izlash..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full h-10 pl-10 pr-4 rounded-lg bg-slate-50 dark:bg-slate-800 border-none text-sm focus:ring-2 focus:ring-indigo-600 font-medium transition-all"
               />
-            </div>
-            <button
-              onClick={() => {
-                if (confirm("Haqiqatan ham barcha audit ma'lumotlarini o'chirib tashlamoqchimisiz?")) {
-                  useUserStore.setState({ auditLogs: [] });
-                }
-              }}
-              title="Auditni tozalash"
-              className="h-10 px-4 rounded-lg bg-rose-50 dark:bg-rose-900/20 flex items-center justify-center text-rose-600 dark:text-rose-400 hover:bg-rose-100 transition-colors text-xs font-bold gap-2"
-            >
-              <Trash2 className="h-4 w-4" />
-              Tozalash
-            </button>
+            </div>  
+            {activeTab === 'audit' && (
+              <button
+                onClick={() => {
+                  if (confirm("Haqiqatan ham barcha audit ma'lumotlarini o'chirib tashlamoqchimisiz?")) {
+                    useUserStore.setState({ auditLogs: [] });
+                  }
+                }}
+                className="h-10 px-4 rounded-lg bg-rose-50 dark:bg-rose-900/20 flex items-center justify-center text-rose-600 hover:bg-rose-100 text-xs font-bold gap-2"
+              >
+                <Trash2 className="h-4 w-4" /> Tozalash
+              </button>
+            )}
+            {activeTab === 'users' && (
+              <button
+                onClick={loadGoogleUsers}
+                disabled={loadingUsers}
+                className="h-10 px-4 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-600 hover:bg-indigo-100 text-xs font-bold gap-2"
+              >
+                <Clock className="h-4 w-4" /> {loadingUsers ? 'Yuklanmoqda...' : 'Yangilash'}
+              </button>
+            )}
           </div>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full whitespace-nowrap">
-            <thead className="bg-slate-50 dark:bg-slate-800">
-              <tr className="text-left text-xs font-bold text-slate-400 uppercase tracking-wider">
-                <th className="px-6 py-4 rounded-tl-2xl">Foydalanuvchi</th>
-                <th className="px-6 py-4">Amal Turi</th>
-                <th className="px-6 py-4">Vaqti</th>
-                <th className="px-6 py-4">Joylashuv (IP)</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 gap-y-1">
-              {filteredLogs.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="px-6 py-12 text-center text-slate-400">
-                    Hech qanday audit log topilmadi.
-                  </td>
+          {activeTab === 'audit' ? (
+            <table className="w-full whitespace-nowrap">
+              <thead className="bg-slate-50 dark:bg-slate-800">
+                <tr className="text-left text-xs font-bold text-slate-400 uppercase tracking-wider">
+                  <th className="px-6 py-4 rounded-tl-2xl">Foydalanuvchi</th>
+                  <th className="px-6 py-4">Amal Turi</th>
+                  <th className="px-6 py-4">Vaqti</th>
+                  <th className="px-6 py-4">Joylashuv (IP)</th>
                 </tr>
-              ) : (
-                filteredLogs.map((log) => (
-                  <tr key={log.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-4">
-                        <div className="h-10 w-10 rounded-full overflow-hidden bg-indigo-100 text-indigo-600 font-bold shrink-0 flex items-center justify-center">
-                          {log.name[0]}
-                        </div>
-                        <div>
-                          <div className="font-bold text-slate-900 dark:text-white">{log.name}</div>
-                          <div className="text-xs text-slate-500 dark:text-slate-400">{log.email}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className={cn("inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold",
-                        log.type === 'login' ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-indigo-50 text-indigo-600 border border-indigo-100"
-                      )}>
-                        {log.type === 'login' ? 'Tizimga Kirdi' : "Ro'yxatdan o'tdi"}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col">
-                        <span className="font-medium text-slate-900 dark:text-white text-sm">
-                          {new Date(log.timestamp).toLocaleDateString('uz-UZ', { day: 'numeric', month: 'long', year: 'numeric' })}
-                        </span>
-                        <span className="text-xs font-medium text-slate-500 flex items-center gap-1 mt-0.5">
-                          {new Date(log.timestamp).toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-sm font-medium text-slate-500 flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-slate-400" />
-                      Tashkent, UZ <span className="text-xs text-slate-400 ml-1 opacity-0 group-hover:opacity-100 transition-opacity">(192.168.1.1)</span>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 gap-y-1">
+                {filteredLogs.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="px-6 py-12 text-center text-slate-400">
+                      Hech qanday audit log topilmadi.
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  filteredLogs.map((log) => (
+                    <tr key={log.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-4">
+                          <div className="h-10 w-10 rounded-full overflow-hidden bg-indigo-100 text-indigo-600 font-bold shrink-0 flex items-center justify-center">
+                            {log.name[0]}
+                          </div>
+                          <div>
+                            <div className="font-bold text-slate-900 dark:text-white">{log.name}</div>
+                            <div className="text-xs text-slate-500 dark:text-slate-400">{log.email}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className={cn("inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold",
+                          log.type === 'login' ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-indigo-50 text-indigo-600 border border-indigo-100"
+                        )}>
+                          {log.type === 'login' ? 'Tizimga Kirdi' : "Ro'yxatdan o'tdi"}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col">
+                          <span className="font-medium text-slate-900 dark:text-white text-sm">
+                            {new Date(log.timestamp).toLocaleDateString('uz-UZ', { day: 'numeric', month: 'long', year: 'numeric' })}
+                          </span>
+                          <span className="text-xs font-medium text-slate-500 flex items-center gap-1 mt-0.5">
+                            {new Date(log.timestamp).toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm font-medium text-slate-500 flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-slate-400" />
+                        Tashkent, UZ <span className="text-xs text-slate-400 ml-1 opacity-0 group-hover:opacity-100 transition-opacity">(192.168.1.1)</span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          ) : (
+            <table className="w-full whitespace-nowrap">
+              <thead className="bg-slate-50 dark:bg-slate-800">
+                <tr className="text-left text-xs font-bold text-slate-400 uppercase tracking-wider">
+                  <th className="px-6 py-4 rounded-tl-2xl">Foydalanuvchi</th>
+                  <th className="px-6 py-4">Oxirgi Kirish</th>
+                  <th className="px-6 py-4">Bloklash orqali</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 gap-y-1">
+                {loadingUsers && googleUsers.length === 0 ? (
+                  <tr>
+                    <td colSpan={3} className="px-6 py-12 text-center text-slate-400">
+                      Yuklanmoqda...
+                    </td>
+                  </tr>
+                ) : filteredUsers.length === 0 ? (
+                  <tr>
+                    <td colSpan={3} className="px-6 py-12 text-center text-slate-400">
+                      Hech qanday Google foydalanuvchisi topilmadi.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredUsers.map((u) => (
+                    <tr key={u.id} className={cn("hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group", u.isBlocked && "opacity-60")}>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-4">
+                          <img src={u.photoURL || `https://ui-avatars.com/api/?name=${u.displayName}`} alt={u.displayName} className="h-10 w-10 rounded-full overflow-hidden shrink-0" />
+                          <div>
+                            <div className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                              {u.displayName}
+                              {u.isBlocked && <span className="px-2 py-0.5 rounded text-[10px] bg-rose-100 text-rose-600">BLOKLANGAN</span>}
+                            </div>
+                            <div className="text-xs text-slate-500 dark:text-slate-400">{u.email}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col">
+                          <span className="font-medium text-slate-900 dark:text-white text-sm">
+                            {u.lastLogin ? new Date(u.lastLogin).toLocaleDateString('uz-UZ') : '-'}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <button
+                          onClick={() => toggleBlockUser(u.id, !!u.isBlocked)}
+                          className={cn(
+                            "h-9 px-4 rounded-lg flex items-center justify-center text-xs font-bold gap-2 transition-colors",
+                            u.isBlocked
+                              ? "bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-100"
+                              : "bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-100"
+                          )}
+                        >
+                          {u.isBlocked ? (
+                            <><CheckCircle className="h-4 w-4" /> Blokdan chiqarish</>
+                          ) : (
+                            <><Ban className="h-4 w-4" /> Bloklash</>
+                          )}
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          )}
         </div>
       </Card>
     </div>

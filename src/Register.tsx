@@ -4,8 +4,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2, Mail, User, ArrowRight, CheckCircle, ChevronDown } from 'lucide-react';
 import { useUserStore } from '@/userStore';
 import { KnowledgeLevel } from '@/types';
-import { useGoogleLogin } from '@react-oauth/google';
-
 const GoogleIcon = () => (
   <svg className="h-5 w-5" viewBox="0 0 24 24">
     <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
@@ -41,23 +39,49 @@ export const RegisterPage = () => {
   const [loading, setLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
-  const onGoogleLogin = useGoogleLogin({
-    onSuccess: async (tokenResponse) => {
-      setIsGoogleLoading(true);
-      try {
-        const userInfo = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-          headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
-        }).then(res => res.json());
+  const onGoogleLogin = async () => {
+    setIsGoogleLoading(true);
+    try {
+      const { signInWithPopup } = await import('firebase/auth');
+      const { auth, googleProvider, db } = await import('@/firebase');
+      const { doc, getDoc, setDoc } = await import('firebase/firestore');
 
-        syncGoogleUser(userInfo);
-        navigate('/dashboard');
-      } catch (err) {
-        console.error('Auth Exception', err);
-      } finally {
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+      
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      if (userDoc.exists() && userDoc.data().isBlocked) {
+        setError('Sizning hisobingiz admin tomonidan bloklangan.');
         setIsGoogleLoading(false);
+        return;
       }
+
+      const userInfo = {
+        sub: user.uid,
+        email: user.email,
+        given_name: user.displayName?.split(' ')[0] || '',
+        family_name: user.displayName?.split(' ').slice(1).join(' ') || '',
+        picture: user.photoURL,
+      };
+
+      syncGoogleUser(userInfo);
+      
+      await setDoc(doc(db, 'users', user.uid), {
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName,
+        photoURL: user.photoURL,
+        lastLogin: new Date().toISOString()
+      }, { merge: true });
+
+      navigate('/dashboard');
+    } catch (err) {
+      console.error('Auth Exception', err);
+      setError('Tizimga kirishda xatolik yuz berdi.');
+    } finally {
+      setIsGoogleLoading(false);
     }
-  });
+  };
 
   const selectedLevelInfo = LEVELS.find(l => l.value === selectedLevel)!;
 

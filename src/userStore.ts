@@ -134,6 +134,7 @@ export const useUserStore = create<UserState>()(
               templateId,
               {
                 to_email: email,
+                email: email,
                 to_name: `${firstName} ${lastName}`,
                 otp_code: otp,
                 message: `Sizning tasdiqlash kodingiz (OTP): ${otp}`
@@ -240,6 +241,7 @@ export const useUserStore = create<UserState>()(
               templateId,
               {
                 to_email: email,
+                email: email,
                 to_name: `${existingUser.firstName} ${existingUser.lastName}`,
                 otp_code: otp,
                 message: `Sizning tizimga kirish kodingiz (OTP): ${otp}`
