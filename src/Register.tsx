@@ -38,6 +38,7 @@ export const RegisterPage = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [testOtp, setTestOtp] = useState('');
 
   const onGoogleLogin = async () => {
     setIsGoogleLoading(true);
@@ -83,9 +84,17 @@ export const RegisterPage = () => {
       });
 
       navigate('/dashboard');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Auth Exception', err);
-      setError('Tizimga kirishda xatolik yuz berdi.');
+      if (err?.code === 'auth/popup-blocked') {
+        setError('Brauzer popup oynani blokladi. Popup oynaga ruxsat bering.');
+      } else if (err?.code === 'auth/unauthorized-domain') {
+        setError('Bu domen Firebase Console-da ruxsat etilmagan. Firebase Console → Authentication → Settings → Authorized domains ga bu domanni qo\'shing.');
+      } else if (err?.code === 'auth/popup-closed-by-user') {
+        setError('Google oynasi yopildi. Qayta urinib ko\'ring.');
+      } else {
+        setError(`Google bilan kirishda xatolik: ${err?.message || err?.code || 'Noma\'lum xato'}`);
+      }
     } finally {
       setIsGoogleLoading(false);
     }
@@ -114,6 +123,10 @@ export const RegisterPage = () => {
     if (!result.success) {
       setError(result.message);
       return;
+    }
+
+    if (result.success && result.otp) {
+      setTestOtp(result.otp);
     }
     
     if (step === 'info') {
@@ -343,6 +356,11 @@ export const RegisterPage = () => {
             <p className="text-sm text-slate-500 dark:text-slate-400">
               <span className="font-bold text-slate-700 dark:text-slate-300">{email}</span> manziliga 6 xonali kod yuborildi
             </p>
+            {testOtp && (
+              <p className="text-[11px] text-indigo-600 bg-indigo-50 dark:bg-indigo-950/40 py-1.5 px-3 rounded-xl mt-2 inline-block font-mono font-bold">
+                Test rejimi uchun OTP: <span className="text-indigo-700 dark:text-indigo-400 font-extrabold select-all">{testOtp}</span>
+              </p>
+            )}
                   </div>
 
                   {/* OTP inputs */}
