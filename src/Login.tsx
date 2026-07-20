@@ -24,7 +24,7 @@ export const LoginPage = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const [testOtp, setTestOtp] = useState('');
+
 
   const onGoogleLogin = async () => {
     setIsGoogleLoading(true);
@@ -35,15 +35,7 @@ export const LoginPage = () => {
 
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
-      
-      // Check if user is blocked
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
-      if (userDoc.exists() && userDoc.data().isBlocked) {
-        setError('Sizning hisobingiz admin tomonidan bloklangan.');
-        setIsGoogleLoading(false);
-        return;
-      }
-      
+
       const userInfo = {
         sub: user.uid,
         email: user.email,
@@ -52,26 +44,49 @@ export const LoginPage = () => {
         picture: user.photoURL,
       };
 
+      // Check if user is blocked (but don't fail login if Firestore is offline)
+      let isBlocked = false;
+      let userExists = false;
+      try {
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        if (userDoc.exists()) {
+          userExists = true;
+          if (userDoc.data().isBlocked) {
+            isBlocked = true;
+          }
+        }
+      } catch (firestoreErr) {
+        console.warn('Firestore offline, skipping block check:', firestoreErr);
+      }
+
+      if (isBlocked) {
+        setError('Sizning hisobingiz admin tomonidan bloklangan.');
+        setIsGoogleLoading(false);
+        return;
+      }
+
       syncGoogleUser(userInfo);
-      
-      // Save minimal info to Firestore for admin usage
-      await setDoc(doc(db, 'users', user.uid), {
-        uid: user.uid,
-        email: user.email,
-        displayName: user.displayName,
-        photoURL: user.photoURL,
-        lastLogin: new Date().toISOString()
-      }, { merge: true });
-
-      // Log Google Auth action
-      await addDoc(collection(db, 'audit_logs'), {
-        type: userDoc.exists() ? 'login' : 'register',
-        email: user.email,
-        name: user.displayName || user.email,
-        timestamp: new Date().toISOString()
-      });
-
       navigate('/dashboard');
+
+      // Save to Firestore in background (don't block login)
+      try {
+        await setDoc(doc(db, 'users', user.uid), {
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName,
+          photoURL: user.photoURL,
+          lastLogin: new Date().toISOString()
+        }, { merge: true });
+
+        await addDoc(collection(db, 'audit_logs'), {
+          type: userExists ? 'login' : 'register',
+          email: user.email,
+          name: user.displayName || user.email,
+          timestamp: new Date().toISOString()
+        });
+      } catch (firestoreErr) {
+        console.warn('Firestore save failed (offline?):', firestoreErr);
+      }
     } catch (err: any) {
       console.error('Auth Exception', err);
       if (err?.code === 'auth/popup-blocked') {
@@ -107,10 +122,6 @@ export const LoginPage = () => {
       return;
     }
 
-    if (result.success && result.otp) {
-      setTestOtp(result.otp);
-    }
-    
     if (step === 'email') {
       setStep('otp');
     }
@@ -241,14 +252,10 @@ export const LoginPage = () => {
                       <Mail className="h-8 w-8 text-indigo-600" />
                     </div>
                     <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-1">OTP Kodini kiriting</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              <span className="font-bold text-slate-700 dark:text-slate-300">{email}</span> ga kod yuborildi
-            </p>
-            {testOtp && (
-              <p className="text-[11px] text-indigo-600 bg-indigo-50 dark:bg-indigo-950/40 py-1.5 px-3 rounded-xl mt-2 inline-block font-mono font-bold">
-                Test rejimi uchun OTP: <span className="text-indigo-700 dark:text-indigo-400 font-extrabold select-all">{testOtp}</span>
-              </p>
-            )}
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      <span className="font-bold text-slate-700 dark:text-slate-300">{email}</span> ga kod yuborildi
+                    </p>
+
                   </div>
 
                   <div>

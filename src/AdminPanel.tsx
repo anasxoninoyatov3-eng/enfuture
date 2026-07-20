@@ -34,7 +34,7 @@ export const AdminPanel = () => {
       const logs: any[] = [];
       querySnapshot.forEach((doc) => {
         logs.push({ id: doc.id, ...doc.data() });
-      });
+      });+
       // Sort by timestamp desc
       logs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
       setFirestoreAuditLogs(logs);

@@ -1,6 +1,17 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import emailjs from '@emailjs/browser';
+
+const EMAILJS_SERVICE_ID = (import.meta as any).env.VITE_EMAILJS_SERVICE_ID || '';
+const EMAILJS_TEMPLATE_ID = (import.meta as any).env.VITE_EMAILJS_TEMPLATE_ID || '';
+const EMAILJS_PUBLIC_KEY = (import.meta as any).env.VITE_EMAILJS_PUBLIC_KEY || '';
+
+if (EMAILJS_PUBLIC_KEY) {
+  emailjs.init(EMAILJS_PUBLIC_KEY);
+  console.log('EmailJS initialized with public key');
+} else {
+  console.warn('EmailJS public key is missing!');
+}
 import { UserProfile, TopicProgress, KnowledgeLevel } from './types';
 import { db } from './firebase';
 import { collection, doc, setDoc, addDoc, getDoc } from 'firebase/firestore';
@@ -116,42 +127,29 @@ export const useUserStore = create<UserState>()(
           pendingRegistration: { firstName, lastName, email, level, otp, expiresAt }
         });
 
-        // Real API logic to send OTP to the user's email using EmailJS
-        const serviceId = (import.meta as any).env.VITE_EMAILJS_SERVICE_ID;
-        const templateId = (import.meta as any).env.VITE_EMAILJS_TEMPLATE_ID;
-        const publicKey = (import.meta as any).env.VITE_EMAILJS_PUBLIC_KEY;
-
-        console.log('EmailJS env vars:', {
-          serviceId: serviceId ? 'set' : 'NOT SET',
-          templateId: templateId ? 'set' : 'NOT SET',
-          publicKey: publicKey ? 'set' : 'NOT SET'
-        });
-
-        if (serviceId && templateId && publicKey) {
+        if (EMAILJS_SERVICE_ID && EMAILJS_TEMPLATE_ID && EMAILJS_PUBLIC_KEY) {
           try {
-            console.log('Sending EmailJS request...');
-            await emailjs.send(
-              serviceId,
-              templateId,
+            console.log('Sending EmailJS request to:', email);
+            const result = await emailjs.send(
+              EMAILJS_SERVICE_ID,
+              EMAILJS_TEMPLATE_ID,
               {
                 to_email: email,
-                email: email,
                 to_name: `${firstName} ${lastName}`,
                 otp_code: otp,
-                message: `Sizning tasdiqlash kodingiz (OTP): ${otp}`
-              },
-              publicKey
+              }
             );
-            console.log(`📧 Email sent successfully to ${email}`);
-          } catch (err) {
-            console.error("EmailJS error:", err);
-            // We still return success with OTP so the user can test even if email fails
+            console.log('📧 Email sent successfully:', result.status, result.text);
+          } catch (err: any) {
+            console.error('EmailJS error:', err);
+            return { success: false, message: `Email yuborishda xatolik: ${err?.text || err?.message || 'Noma\'lum xatolik'}` };
           }
         } else {
-          console.warn('EmailJS keys are missing in .env file! Please set VITE_EMAILJS_SERVICE_ID, VITE_EMAILJS_TEMPLATE_ID, VITE_EMAILJS_PUBLIC_KEY');
+          console.warn('EmailJS keys are missing!');
+          return { success: false, message: 'Email sozlamalari topilmadi. Admin bilan bog\'laning.' };
         }
 
-      return { success: true, message: 'OTP yuborildi', otp };
+        return { success: true, message: 'OTP yuborildi' };
       },
 
       verifyOtpAndRegister: async (email, otp) => {
@@ -248,39 +246,29 @@ export const useUserStore = create<UserState>()(
           }
         });
 
-        const serviceId = (import.meta as any).env.VITE_EMAILJS_SERVICE_ID;
-        const templateId = (import.meta as any).env.VITE_EMAILJS_TEMPLATE_ID;
-        const publicKey = (import.meta as any).env.VITE_EMAILJS_PUBLIC_KEY;
-
-        console.log('EmailJS env vars (login):', {
-          serviceId: serviceId ? 'set' : 'NOT SET',
-          templateId: templateId ? 'set' : 'NOT SET',
-          publicKey: publicKey ? 'set' : 'NOT SET'
-        });
-
-        if (serviceId && templateId && publicKey) {
+        if (EMAILJS_SERVICE_ID && EMAILJS_TEMPLATE_ID && EMAILJS_PUBLIC_KEY) {
           try {
-            console.log('Sending EmailJS login request...');
-            await emailjs.send(
-              serviceId,
-              templateId,
+            console.log('Sending EmailJS login request to:', email);
+            const result = await emailjs.send(
+              EMAILJS_SERVICE_ID,
+              EMAILJS_TEMPLATE_ID,
               {
                 to_email: email,
-                email: email,
                 to_name: `${existingUser.firstName} ${existingUser.lastName}`,
                 otp_code: otp,
-                message: `Sizning tizimga kirish kodingiz (OTP): ${otp}`
-              },
-              publicKey
+              }
             );
-            console.log(`📧 Login Email sent successfully to ${email}`);
-          } catch (err) {
-            console.error("EmailJS login error:", err);
-            // We still return success with OTP so the user can test even if email fails
+            console.log('📧 Login Email sent successfully:', result.status, result.text);
+          } catch (err: any) {
+            console.error('EmailJS login error:', err);
+            return { success: false, message: `Email yuborishda xatolik: ${err?.text || err?.message || 'Noma\'lum xatolik'}` };
           }
+        } else {
+          console.warn('EmailJS keys are missing!');
+          return { success: false, message: 'Email sozlamalari topilmadi. Admin bilan bog\'laning.' };
         }
 
-        return { success: true, message: 'OTP yuborildi', otp };
+        return { success: true, message: 'OTP yuborildi' };
       },
 
       verifyLoginOtp: async (email, otp) => {

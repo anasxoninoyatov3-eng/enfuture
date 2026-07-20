@@ -38,7 +38,7 @@ export const RegisterPage = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const [testOtp, setTestOtp] = useState('');
+
 
   const onGoogleLogin = async () => {
     setIsGoogleLoading(true);
@@ -49,13 +49,6 @@ export const RegisterPage = () => {
 
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
-      
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
-      if (userDoc.exists() && userDoc.data().isBlocked) {
-        setError('Sizning hisobingiz admin tomonidan bloklangan.');
-        setIsGoogleLoading(false);
-        return;
-      }
 
       const userInfo = {
         sub: user.uid,
@@ -65,25 +58,47 @@ export const RegisterPage = () => {
         picture: user.photoURL,
       };
 
+      let isBlocked = false;
+      let userExists = false;
+      try {
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        if (userDoc.exists()) {
+          userExists = true;
+          if (userDoc.data().isBlocked) {
+            isBlocked = true;
+          }
+        }
+      } catch (firestoreErr) {
+        console.warn('Firestore offline, skipping block check:', firestoreErr);
+      }
+
+      if (isBlocked) {
+        setError('Sizning hisobingiz admin tomonidan bloklangan.');
+        setIsGoogleLoading(false);
+        return;
+      }
+
       syncGoogleUser(userInfo);
-      
-      await setDoc(doc(db, 'users', user.uid), {
-        uid: user.uid,
-        email: user.email,
-        displayName: user.displayName,
-        photoURL: user.photoURL,
-        lastLogin: new Date().toISOString()
-      }, { merge: true });
-
-      // Log Google Auth action
-      await addDoc(collection(db, 'audit_logs'), {
-        type: userDoc.exists() ? 'login' : 'register',
-        email: user.email,
-        name: user.displayName || user.email,
-        timestamp: new Date().toISOString()
-      });
-
       navigate('/dashboard');
+
+      try {
+        await setDoc(doc(db, 'users', user.uid), {
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName,
+          photoURL: user.photoURL,
+          lastLogin: new Date().toISOString()
+        }, { merge: true });
+
+        await addDoc(collection(db, 'audit_logs'), {
+          type: userExists ? 'login' : 'register',
+          email: user.email,
+          name: user.displayName || user.email,
+          timestamp: new Date().toISOString()
+        });
+      } catch (firestoreErr) {
+        console.warn('Firestore save failed (offline?):', firestoreErr);
+      }
     } catch (err: any) {
       console.error('Auth Exception', err);
       if (err?.code === 'auth/popup-blocked') {
@@ -125,10 +140,6 @@ export const RegisterPage = () => {
       return;
     }
 
-    if (result.success && result.otp) {
-      setTestOtp(result.otp);
-    }
-    
     if (step === 'info') {
       setStep('otp');
     }
@@ -356,11 +367,7 @@ export const RegisterPage = () => {
             <p className="text-sm text-slate-500 dark:text-slate-400">
               <span className="font-bold text-slate-700 dark:text-slate-300">{email}</span> manziliga 6 xonali kod yuborildi
             </p>
-            {testOtp && (
-              <p className="text-[11px] text-indigo-600 bg-indigo-50 dark:bg-indigo-950/40 py-1.5 px-3 rounded-xl mt-2 inline-block font-mono font-bold">
-                Test rejimi uchun OTP: <span className="text-indigo-700 dark:text-indigo-400 font-extrabold select-all">{testOtp}</span>
-              </p>
-            )}
+
                   </div>
 
                   {/* OTP inputs */}
