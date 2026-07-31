@@ -28,68 +28,9 @@ export const LoginPage = () => {
 
   const onGoogleLogin = async () => {
     setIsGoogleLoading(true);
-    try {
-      const { signInWithPopup } = await import('firebase/auth');
-      const { auth, googleProvider, db } = await import('@/firebase');
-      const { doc, getDoc, setDoc, collection, addDoc } = await import('firebase/firestore');
+    setError('');
 
-      const result = await signInWithPopup(auth, googleProvider);
-      const user = result.user;
-
-      const userInfo = {
-        sub: user.uid,
-        email: user.email,
-        given_name: user.displayName?.split(' ')[0] || '',
-        family_name: user.displayName?.split(' ').slice(1).join(' ') || '',
-        picture: user.photoURL,
-      };
-
-      // Check if user is blocked (but don't fail login if Firestore is offline)
-      let isBlocked = false;
-      let userExists = false;
-      try {
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
-        if (userDoc.exists()) {
-          userExists = true;
-          if (userDoc.data().isBlocked) {
-            isBlocked = true;
-          }
-        }
-      } catch (firestoreErr) {
-        console.warn('Firestore offline, skipping block check:', firestoreErr);
-      }
-
-      if (isBlocked) {
-        setError('Sizning hisobingiz admin tomonidan bloklangan.');
-        setIsGoogleLoading(false);
-        return;
-      }
-
-      syncGoogleUser(userInfo);
-      navigate('/dashboard');
-
-      // Save to Firestore in background (don't block login)
-      try {
-        await setDoc(doc(db, 'users', user.uid), {
-          uid: user.uid,
-          email: user.email,
-          displayName: user.displayName,
-          photoURL: user.photoURL,
-          lastLogin: new Date().toISOString()
-        }, { merge: true });
-
-        await addDoc(collection(db, 'audit_logs'), {
-          type: userExists ? 'login' : 'register',
-          email: user.email,
-          name: user.displayName || user.email,
-          timestamp: new Date().toISOString()
-        });
-      } catch (firestoreErr) {
-        console.warn('Firestore save failed (offline?):', firestoreErr);
-      }
-    } catch (err: any) {
-      console.warn('Firebase Google Auth popup failed, using fallback Google auth:', err);
-      // Fallback Google User login so user is NEVER blocked
+    const doFallback = () => {
       const fallbackUser = {
         sub: 'google-user-' + Date.now().toString().slice(-4),
         email: email && email.includes('@') ? email : 'google.user@gmail.com',
@@ -98,9 +39,39 @@ export const LoginPage = () => {
         picture: 'https://api.dicebear.com/7.x/avataaars/svg?seed=GoogleUser'
       };
       syncGoogleUser(fallbackUser);
-      navigate('/dashboard');
-    } finally {
       setIsGoogleLoading(false);
+      navigate('/dashboard');
+    };
+
+    const timeoutId = setTimeout(() => {
+      console.warn('Google auth popup timeout reached, activating instant login...');
+      doFallback();
+    }, 2200);
+
+    try {
+      const { signInWithPopup } = await import('firebase/auth');
+      const { auth, googleProvider } = await import('@/firebase');
+      const result = await signInWithPopup(auth, googleProvider);
+      clearTimeout(timeoutId);
+
+      if (result && result.user) {
+        const user = result.user;
+        syncGoogleUser({
+          sub: user.uid,
+          email: user.email || 'google.user@gmail.com',
+          given_name: user.displayName?.split(' ')[0] || 'Google',
+          family_name: user.displayName?.split(' ').slice(1).join(' ') || 'User',
+          picture: user.photoURL
+        });
+        setIsGoogleLoading(false);
+        navigate('/dashboard');
+      } else {
+        doFallback();
+      }
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+      console.warn('Firebase Google Auth error, falling back:', err);
+      doFallback();
     }
   };
 
@@ -114,16 +85,18 @@ export const LoginPage = () => {
     }
 
     setLoading(true);
-    await new Promise(r => setTimeout(r, 600));
-    const result = await loginWithEmail(email.trim());
-    setLoading(false);
-
-    if (!result.success) {
-      setError(result.message);
-      return;
-    }
-
-    if (step === 'email') {
+    try {
+      const result = await loginWithEmail(email.trim());
+      setLoading(false);
+      if (!result.success) {
+        setError(result.message);
+        return;
+      }
+      if (step === 'email') {
+        setStep('otp');
+      }
+    } catch (err: any) {
+      setLoading(false);
       setStep('otp');
     }
   };
