@@ -231,7 +231,7 @@ export const useUserStore = create<UserState>()(
         try {
           const { signInAnonymously } = await import('firebase/auth');
           const { auth } = await import('./firebase');
-          
+
           if (!auth.currentUser) {
             try {
               const anonCred = await signInAnonymously(auth);
@@ -334,7 +334,6 @@ export const useUserStore = create<UserState>()(
         });
 
         // Log generated OTP clearly in console for easy debugging
-        console.log("%c🔐 ENK ENGLISH LOGIN OTP CODE: " + otp, "color: #6366f1; font-weight: bold; font-size: 16px;");
 
         if (EMAILJS_SERVICE_ID && EMAILJS_TEMPLATE_ID && EMAILJS_PUBLIC_KEY) {
           try {
@@ -410,7 +409,7 @@ export const useUserStore = create<UserState>()(
         try {
           const { signInAnonymously } = await import('firebase/auth');
           const { auth } = await import('./firebase');
-          
+
           if (!auth.currentUser) {
             try {
               await signInAnonymously(auth);
