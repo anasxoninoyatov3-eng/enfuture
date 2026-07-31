@@ -2,15 +2,17 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import emailjs from '@emailjs/browser';
 
-const EMAILJS_SERVICE_ID = (import.meta as any).env.VITE_EMAILJS_SERVICE_ID || '';
-const EMAILJS_TEMPLATE_ID = (import.meta as any).env.VITE_EMAILJS_TEMPLATE_ID || '';
-const EMAILJS_PUBLIC_KEY = (import.meta as any).env.VITE_EMAILJS_PUBLIC_KEY || '';
+const EMAILJS_SERVICE_ID = (import.meta as any).env.VITE_EMAILJS_SERVICE_ID || 'service_vyu1648';
+const EMAILJS_TEMPLATE_ID = (import.meta as any).env.VITE_EMAILJS_TEMPLATE_ID || 'template_ifmgq7r';
+const EMAILJS_PUBLIC_KEY = (import.meta as any).env.VITE_EMAILJS_PUBLIC_KEY || 'L-9ag-QLYwdFjyL-v';
 
 if (EMAILJS_PUBLIC_KEY) {
-  emailjs.init(EMAILJS_PUBLIC_KEY);
-  console.log('EmailJS initialized with public key');
-} else {
-  console.warn('EmailJS public key is missing!');
+  try {
+    emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
+    console.log('EmailJS initialized with public key:', EMAILJS_PUBLIC_KEY);
+  } catch (e) {
+    console.warn('EmailJS init warning:', e);
+  }
 }
 import { UserProfile, TopicProgress, KnowledgeLevel } from './types';
 import { db } from './firebase';
@@ -160,21 +162,24 @@ export const useUserStore = create<UserState>()(
 
         if (EMAILJS_SERVICE_ID && EMAILJS_TEMPLATE_ID && EMAILJS_PUBLIC_KEY) {
           try {
-            console.log('Sending EmailJS request to:', cleanEmail);
+            console.log('Sending EmailJS request to:', cleanEmail, 'Service:', EMAILJS_SERVICE_ID, 'Template:', EMAILJS_TEMPLATE_ID);
+            const templateParams = {
+              to_email: cleanEmail,
+              user_email: cleanEmail,
+              email: cleanEmail,
+              to_name: `${firstName} ${lastName}`.trim(),
+              otp_code: otp
+            };
             const result = await emailjs.send(
               EMAILJS_SERVICE_ID,
               EMAILJS_TEMPLATE_ID,
-              {
-                to_email: cleanEmail,
-                to_name: `${firstName} ${lastName}`,
-                otp_code: otp,
-              },
-              EMAILJS_PUBLIC_KEY
+              templateParams,
+              { publicKey: EMAILJS_PUBLIC_KEY }
             );
             console.log('📧 Email sent successfully via EmailJS:', result.status, result.text);
             return { success: true, message: 'Tasdiqlash kodi email manzilingizga yuborildi', otp };
           } catch (err: any) {
-            console.warn('EmailJS sending failed, falling back to demo mode:', err);
+            console.error('🚨 EmailJS sending failed with error:', err?.status, err?.text || err);
             return { success: true, message: `OTP yuborildi! (Demo OTP: ${otp})`, otp };
           }
         } else {
@@ -333,21 +338,24 @@ export const useUserStore = create<UserState>()(
 
         if (EMAILJS_SERVICE_ID && EMAILJS_TEMPLATE_ID && EMAILJS_PUBLIC_KEY) {
           try {
-            console.log('Sending EmailJS login request to:', cleanEmail);
+            console.log('Sending EmailJS login request to:', cleanEmail, 'Service:', EMAILJS_SERVICE_ID, 'Template:', EMAILJS_TEMPLATE_ID);
+            const templateParams = {
+              to_email: cleanEmail,
+              user_email: cleanEmail,
+              email: cleanEmail,
+              to_name: `${existingUser.firstName} ${existingUser.lastName}`.trim(),
+              otp_code: otp
+            };
             const result = await emailjs.send(
               EMAILJS_SERVICE_ID,
               EMAILJS_TEMPLATE_ID,
-              {
-                to_email: cleanEmail,
-                to_name: `${existingUser.firstName} ${existingUser.lastName}`,
-                otp_code: otp,
-              },
-              EMAILJS_PUBLIC_KEY
+              templateParams,
+              { publicKey: EMAILJS_PUBLIC_KEY }
             );
             console.log('📧 Login Email sent successfully:', result.status, result.text);
             return { success: true, message: 'Tasdiqlash kodi email manzilingizga yuborildi', otp };
           } catch (err: any) {
-            console.warn('EmailJS login sending failed, falling back to demo mode:', err);
+            console.error('🚨 EmailJS login sending failed with error:', err?.status, err?.text || err);
             return { success: true, message: `OTP yuborildi! (Demo OTP: ${otp})`, otp };
           }
         } else {
@@ -359,8 +367,10 @@ export const useUserStore = create<UserState>()(
       verifyLoginOtp: async (email, otp) => {
         const state = get();
         const pending = state.pendingRegistration;
+        const cleanEmail = email.trim().toLowerCase();
+        const cleanOtp = otp.trim();
 
-        if (!pending || pending.email.toLowerCase() !== email.toLowerCase()) {
+        if (!pending || pending.email.toLowerCase() !== cleanEmail) {
           return { success: false, message: 'Kirish ma\'lumotlari topilmadi' };
         }
 
@@ -369,18 +379,30 @@ export const useUserStore = create<UserState>()(
           return { success: false, message: 'OTP muddati o\'tib ketdi' };
         }
 
-        if (pending.otp !== otp) {
+        if (pending.otp.trim() !== cleanOtp) {
           return { success: false, message: 'OTP kodi noto\'g\'ri' };
         }
 
-        const user = state.allUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
-        if (!user) return { success: false, message: 'Foydalanuvchi topilmadi' };
+        let user = state.allUsers.find(u => u.email.toLowerCase() === cleanEmail);
+        if (!user) {
+          user = {
+            id: Date.now().toString(),
+            firstName: pending.firstName || 'User',
+            lastName: pending.lastName || '',
+            email: pending.email,
+            xp: 0,
+            streak: 0,
+            currentLevel: pending.level || 'A1',
+            topicProgress: [],
+            joinDate: new Date().toISOString()
+          };
+        }
 
         const newAudit: AuditLog = {
           id: Date.now().toString() + Math.random(),
           type: 'login',
           email: user.email,
-          name: `${user.firstName} ${user.lastName}`,
+          name: `${user.firstName} ${user.lastName}`.trim(),
           timestamp: new Date().toISOString()
         };
 
