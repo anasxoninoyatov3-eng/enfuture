@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2, Mail, ArrowRight, CheckCircle } from 'lucide-react';
 import { useUserStore } from '@/userStore';
+import { useUiStore } from '@/uiStore';
 const GoogleIcon = () => (
   <svg className="h-5 w-5" viewBox="0 0 24 24">
     <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
@@ -17,6 +18,7 @@ type Step = 'email' | 'otp';
 export const LoginPage = () => {
   const navigate = useNavigate();
   const { loginWithEmail, verifyLoginOtp, syncGoogleUser } = useUserStore();
+  const { isDarkMode } = useUiStore();
 
   const [step, setStep] = useState<Step>('email');
   const [email, setEmail] = useState('');
@@ -122,7 +124,7 @@ export const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-slate-50 via-indigo-50/30 to-violet-50/20 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 p-4">
+    <div className={`min-h-screen w-full flex items-center justify-center p-4 transition-colors duration-300 ${isDarkMode ? 'bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950' : 'bg-gradient-to-br from-slate-50 via-indigo-50/30 to-violet-50/20'}`}>
       <motion.div
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}

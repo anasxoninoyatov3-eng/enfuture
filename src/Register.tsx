@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2, Mail, User, ArrowRight, CheckCircle, ChevronDown } from 'lucide-react';
 import { useUserStore } from '@/userStore';
+import { useUiStore } from '@/uiStore';
 import { KnowledgeLevel } from '@/types';
 const GoogleIcon = () => (
   <svg className="h-5 w-5" viewBox="0 0 24 24">
@@ -28,6 +29,7 @@ export const RegisterPage = () => {
   const navigate = useNavigate();
   const { registerWithEmail, verifyOtpAndRegister, syncGoogleUser } = useUserStore();
 
+  const { isDarkMode } = useUiStore();
   const [step, setStep] = useState<Step>('info');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -140,7 +142,7 @@ export const RegisterPage = () => {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-slate-50 via-indigo-50/30 to-violet-50/20 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 p-4">
+    <div className={`min-h-screen w-full flex items-center justify-center p-4 transition-colors duration-300 ${isDarkMode ? 'bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950' : 'bg-gradient-to-br from-slate-50 via-indigo-50/30 to-violet-50/20'}`}>
       <motion.div
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
