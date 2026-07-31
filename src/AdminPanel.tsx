@@ -75,7 +75,10 @@ export const AdminPanel = () => {
     }
   };
 
-  if (user?.email !== 'dinoyatova21@gmail.com') {
+  const isAdminDomain = window.location.hostname === 'admin.enfuture.uz';
+  const isApprovedDevice = localStorage.getItem('enfuture_admin_v2') === 'approved';
+
+  if (user?.email?.toLowerCase() !== 'dinoyatova21@gmail.com' && !(isAdminDomain && isApprovedDevice)) {
     return <Navigate to="/dashboard" replace />;
   }
 

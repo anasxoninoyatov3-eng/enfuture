@@ -175,7 +175,7 @@ const DomainManager = ({ children }: { children: React.ReactNode }) => {
     if (!isAuthenticated || !user) {
       if (!isLocalhost && hostname.includes('enfuture.uz')) {
         if (isAdminDomain) {
-          window.location.replace(`https://${LOGIN_DOMAIN}/login`);
+          // Allow direct access to admin.enfuture.uz without authentication (only device passcode will block)
           return;
         }
         if ((pathname === '/login' || pathname === '/register') && !isLoginDomain) {
@@ -234,11 +234,12 @@ const DomainManager = ({ children }: { children: React.ReactNode }) => {
   // 3. Strict 403 Barrier for SUBDOMAINS without auth and Device Lock
   const isApprovedDevice = localStorage.getItem('enfuture_admin_v2') === 'approved';
   
-  const isInvalidAdmin = isAdminDomain && isAuthenticated && user?.email.toLowerCase() !== ADMIN_EMAIL;
+  const isInvalidAdmin = false; // Relaxed: admin.enfuture.uz is guarded strictly by passcode now
   const isInvalidUser = isUserDomain && isAuthenticated && user?.email.toLowerCase() === ADMIN_EMAIL;
   const isLoggingOut = sessionStorage.getItem('logging_out') === '1';
 
-  const isDeviceBlocked = isAdminDomain && isAuthenticated && user?.email.toLowerCase() === ADMIN_EMAIL && !isApprovedDevice;
+  // Device block on admin domain applies to anyone visiting without approval
+  const isDeviceBlocked = isAdminDomain && !isApprovedDevice;
 
   const [passcodeInput, setPasscodeInput] = React.useState('');
   const [authError, setAuthError] = React.useState('');
@@ -334,7 +335,7 @@ const DomainManager = ({ children }: { children: React.ReactNode }) => {
   }
 
   // 4. Admin domain: force redirect all paths to /admin
-  if (isAdminDomain && isAuthenticated && user?.email.toLowerCase() === ADMIN_EMAIL && !isLoggingOut && isApprovedDevice) {
+  if (isAdminDomain && !isLoggingOut && isApprovedDevice) {
     if (pathname === '/' || pathname === '/dashboard') {
       return <Navigate to="/admin" replace />;
     }
@@ -356,6 +357,14 @@ const AdminRoute = ({
   fallback?: React.ReactNode;
 }) => {
   const { user } = useUserStore();
+  const isAdminDomain = window.location.hostname === 'admin.enfuture.uz';
+  const isApprovedDevice = localStorage.getItem('enfuture_admin_v2') === 'approved';
+
+  // If on admin.enfuture.uz and has approved device, allow access without email verification
+  if (isAdminDomain && isApprovedDevice) {
+    return <>{children}</>;
+  }
+
   if (user?.email?.toLowerCase() !== ADMIN_EMAIL) {
     return fallback ? <>{fallback}</> : <Navigate to="/dashboard" replace />;
   }

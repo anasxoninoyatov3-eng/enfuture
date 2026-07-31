@@ -3,10 +3,12 @@ import { Button } from '@/Button';
 import { Card, CardContent } from '@/Card';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/utils';
+import { Link } from 'react-router-dom';
+import { Helicopter3D } from '@/Helicopter3D';
 
 import {
    Globe,
-   ChevronRight, CheckCircle2, Sparkles, BookOpen, TrendingUp
+   ChevronRight, CheckCircle2, Sparkles, BookOpen, TrendingUp, FastForward
 } from 'lucide-react';
 
 const ANIMATION_WORDS = [
@@ -60,25 +62,35 @@ function useSmartTypewriter(words: string[], start: boolean = true, typingSpeed 
 
 export const HomePage = () => {
    const [stage, setStage] = useState(0);
-   const animatedText = useSmartTypewriter(ANIMATION_WORDS, stage >= 5);
-
-
+   const [buttonPressed, setButtonPressed] = useState(false);
+   const animatedText = useSmartTypewriter(ANIMATION_WORDS, buttonPressed || stage >= 3);
 
    useEffect(() => {
       const timings = [
-         { stage: 1, delay: 500 },  // Book flies in
-         { stage: 2, delay: 1500 }, // Book opens
-         { stage: 3, delay: 2000 }, // Text emerges
-         { stage: 4, delay: 3200 }, // Helicopter flies in
-         { stage: 5, delay: 4500 }, // Helicopter pulls text up
-         { stage: 6, delay: 6000 }, // Heli drops text, Book shrinks
-         { stage: 7, delay: 7000 }, // Heli grabs book
-         { stage: 8, delay: 7500 }, // Fly away
-         { stage: 9, delay: 9000 } // Normal site resume
+         { stage: 1, delay: 500 },   // 3D Helicopter flies in & hovers above 3D button
+         { stage: 2, delay: 1800 },  // Helicopter lowers down
+         { stage: 3, delay: 3000 },  // Helicopter PRESSES the 3D Button!
+         { stage: 5, delay: 4800 },  // Helicopter ascends and flies away
+         { stage: 6, delay: 6200 }   // Transition complete -> Main Hero Text
       ];
       const timeouts = timings.map(t => setTimeout(() => setStage(t.stage), t.delay));
       return () => timeouts.forEach(clearTimeout);
    }, []);
+
+   const handlePressButton = () => {
+      setButtonPressed(true);
+   };
+
+   const triggerHelicopterPress = () => {
+      setStage(3);
+      setButtonPressed(true);
+   };
+
+   const skipIntro = () => {
+      setButtonPressed(true);
+      setStage(6);
+   };
+
    const containerVariants = {
       hidden: { opacity: 0 },
       visible: {
@@ -89,19 +101,6 @@ export const HomePage = () => {
 
    const itemVariants: any = {
       visible: { y: 0, opacity: 1, transition: { duration: 0.5, ease: 'easeOut' } }
-   };
-
-   const textVariants = {
-      stage_0: { y: 120, scale: 0, opacity: 0 },
-      stage_1: { y: 120, scale: 0, opacity: 0 },
-      stage_2: { y: 120, scale: 0, opacity: 0 },
-      stage_3: { y: 120, scale: 0.8, opacity: 1, transition: { duration: 0.8, type: 'spring' } },
-      stage_4: { y: 120, scale: 0.8, opacity: 1 },
-      stage_5: { y: 0, scale: 1, opacity: 1, transition: { duration: 1.5, type: 'spring', bounce: 0.2 } },
-      stage_6: { y: 0, scale: 1, opacity: 1 },
-      stage_7: { y: 0, scale: 1, opacity: 1 },
-      stage_8: { y: 0, scale: 1, opacity: 1 },
-      stage_9: { y: 0, scale: 1, opacity: 1 },
    };
 
    return (
@@ -119,85 +118,57 @@ export const HomePage = () => {
                <a href="#community" className="text-[10px] font-bold text-slate-500 dark:text-slate-400 hover:text-indigo-600 transition-colors uppercase tracking-widest">Community</a>
             </div>
 
-            <div className="flex items-center gap-2 md:gap-6">
+            <div className="flex items-center gap-2 md:gap-4">
+              {stage < 6 && (
+                <button
+                  type="button"
+                  onClick={skipIntro}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-xs font-bold text-slate-600 dark:text-slate-300 transition-all cursor-pointer mr-2"
+                >
+                  <FastForward className="h-3.5 w-3.5" /> O'tkazib yuborish
+                </button>
+              )}
               <Button asChild variant="ghost" className="px-3 md:px-4 font-semibold text-sm text-slate-600 dark:text-slate-300">
-                <a href="https://login.enfuture.uz/login">Sign In</a>
+                <Link to="/login">Sign In</Link>
               </Button>
               <Button asChild className="rounded-lg h-9 md:h-10 px-4 md:px-6 text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm">
-                <a href="https://login.enfuture.uz/register">Get Started</a>
+                <Link to="/register">Get Started</Link>
               </Button>
             </div>
          </nav>
 
          <main>
             {/* Hero Section */}
-            <section className="relative pt-32 md:pt-64 pb-20 md:pb-48 px-4 md:px-6 bg-slate-50 dark:bg-slate-800/50 overflow-hidden min-h-screen">
+            <section className="relative pt-20 md:pt-28 pb-20 md:pb-36 px-4 md:px-6 bg-slate-50 dark:bg-slate-800/50 overflow-hidden min-h-screen">
                <div className="max-w-6xl mx-auto flex flex-col items-center text-center relative z-10">
 
-                  {/* Cinematic Overlay */}
-                  <div className="absolute inset-0 pointer-events-none overflow-visible z-20 flex justify-center">
-                     {stage < 9 && (
-                        <>
-                           {/* Book */}
-                           <motion.div
-                              initial="stage_0"
-                              animate={`stage_${stage}`}
-                              variants={{
-                                 stage_0: { y: 800, scale: 0, opacity: 0 },
-                                 stage_1: { y: 120, scale: 2.5, opacity: 1, transition: { type: 'spring', damping: 15 } },
-                                 stage_2: { y: 120, scale: 2.5, opacity: 1 },
-                                 stage_3: { y: 120, scale: 2.5, opacity: 1 },
-                                 stage_4: { y: 120, scale: 2.5, opacity: 1 },
-                                 stage_5: { y: 120, scale: 2.5, opacity: 1 },
-                                 stage_6: { y: 350, scale: 1, opacity: 1, transition: { duration: 1, type: "spring" } },
-                                 stage_7: { y: 350, scale: 1, opacity: 1 },
-                                 stage_8: { x: typeof window !== 'undefined' && window.innerWidth > 768 ? 1000 : 400, y: -200, opacity: 1, transition: { duration: 1.5 } },
-                              }}
-                              className="absolute top-0 flex flex-col items-center"
-                           >
-                              <AnimatePresence mode="wait">
-                                 {stage >= 2 && stage < 6 ? (
-                                    <motion.div key="open" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }} className="h-72 w-[500px] bg-slate-900 border-4 border-indigo-600 rounded-xl shadow-2xl flex items-center justify-center overflow-hidden relative">
-                                       <BookOpen className="h-24 w-24 text-indigo-600/20 relative z-10" />
-                                       <div className="absolute inset-0 bg-indigo-900/10 animate-pulse" />
-                                    </motion.div>
-                                 ) : (
-                                    <motion.div key="closed" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}>
-                                       <img src="/favicon.svg?v=6" className="h-32 w-32 drop-shadow-2xl" />
-                                    </motion.div>
-                                 )}
-                              </AnimatePresence>
-                           </motion.div>
-
-                           {/* Helicopter */}
-                           <motion.div
-                              initial="stage_0"
-                              animate={`stage_${stage}`}
-                              variants={{
-                                 stage_0: { x: -800, y: -200, opacity: 0 },
-                                 stage_1: { x: -800, y: -200, opacity: 0 },
-                                 stage_2: { x: -800, y: -200, opacity: 0 },
-                                 stage_3: { x: -800, y: -200, opacity: 0 },
-                                 stage_4: { x: 0, y: 50, opacity: 1, transition: { duration: 1, type: "spring" } },
-                                 stage_5: { x: 0, y: -80, opacity: 1, transition: { duration: 1.5, type: 'spring', bounce: 0.2 } },
-                                 stage_6: { x: 0, y: 280, opacity: 1, transition: { duration: 1, delay: 0.2 } },
-                                 stage_7: { x: 0, y: 280, opacity: 1 },
-                                 stage_8: { x: typeof window !== 'undefined' && window.innerWidth > 768 ? 1000 : 400, y: -200, rotate: 15, opacity: 1, transition: { duration: 1.5 } },
-                              }}
-                              className="absolute top-0 text-[80px] drop-shadow-2xl"
-                           >
-                              🚁
-                              {stage >= 4 && stage <= 5 && (
-                                 <motion.div
-                                    initial={{ height: 0, opacity: 0 }}
-                                    animate={{ height: stage === 5 ? 80 : 70, opacity: 1 }}
-                                    className="absolute top-[80px] left-1/2 w-1 -ml-[2px] bg-slate-800 dark:bg-slate-300 origin-top z-[-1]"
-                                 />
-                              )}
-                           </motion.div>
-                        </>
+                  {/* 3D Helicopter Interactive Canvas */}
+                  <AnimatePresence>
+                     {stage < 6 && (
+                        <motion.div
+                           initial={{ opacity: 0 }}
+                           animate={{ opacity: 1 }}
+                           exit={{ opacity: 0, scale: 0.9 }}
+                           className="w-full relative z-30 flex flex-col items-center"
+                        >
+                           <Helicopter3D
+                              stage={stage}
+                              onPressButton={handlePressButton}
+                              onFinish={() => setStage(6)}
+                           />
+                           {stage < 3 && (
+                             <motion.button
+                               initial={{ opacity: 0, y: 10 }}
+                               animate={{ opacity: 1, y: 0 }}
+                               onClick={triggerHelicopterPress}
+                               className="mt-[-20px] mb-4 px-6 py-2.5 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-lg shadow-indigo-200 dark:shadow-none flex items-center gap-2 cursor-pointer transition-all hover:scale-105"
+                             >
+                               🚁 Vertolyot Tugmani Bossin!
+                             </motion.button>
+                           )}
+                        </motion.div>
                      )}
-                  </div>
+                  </AnimatePresence>
 
                   <motion.div
                      variants={containerVariants}
@@ -205,40 +176,49 @@ export const HomePage = () => {
                      animate="visible"
                      className="space-y-6 md:space-y-8"
                   >
-                     <motion.div variants={itemVariants} className={cn("inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-[10px] md:text-xs font-bold text-indigo-600 shadow-sm transition-opacity duration-1000", stage < 6 ? "opacity-0" : "opacity-100")}>
-                        Next-Gen English Learning
+                     <motion.div
+                        variants={itemVariants}
+                        className={cn(
+                           "inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-bold text-indigo-600 shadow-sm transition-all duration-700",
+                           buttonPressed || stage >= 3 ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-6 scale-95"
+                        )}
+                     >
+                        <Sparkles className="h-4 w-4 text-indigo-600 animate-spin" /> Next-Gen English Learning
                      </motion.div>
 
                      <motion.h1
-                        variants={itemVariants && textVariants}
-                        initial="stage_0"
-                        animate={`stage_${stage}`}
-                        className="text-[clamp(2.5rem,8vw,5.5rem)] font-black text-slate-900 dark:text-white max-w-4xl mx-auto leading-[1.1] tracking-tight relative z-40"
+                        className={cn(
+                           "text-[clamp(2.5rem,7vw,5rem)] font-black text-slate-900 dark:text-white max-w-4xl mx-auto leading-[1.1] tracking-tight relative z-40 transition-all duration-700",
+                           buttonPressed || stage >= 3 ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-10 scale-95"
+                        )}
                      >
                         Welcome to enfuture!<br />
-                        <span className="text-[clamp(1.5rem,4vw,3rem)] text-slate-500 dark:text-slate-400 block mt-2">Learning with us</span>
+                        <span className="text-[clamp(1.5rem,3.5vw,2.5rem)] text-slate-500 dark:text-slate-400 block mt-2">Learning with us</span>
                         <span className="text-indigo-600 block min-h-[1.2em] relative inline-block mt-2">
                            {animatedText}
-                           <span className={cn("absolute -right-[0.5em] font-light", stage >= 5 && "animate-pulse")}>|</span>
+                           <span className={cn("absolute -right-[0.5em] font-light", (buttonPressed || stage >= 3) && "animate-pulse")}>|</span>
                         </span>
                      </motion.h1>
 
                      <motion.div
-                        className={cn("transition-all duration-1000", stage < 8 ? "opacity-0 translate-y-10 pointer-events-none" : "opacity-100 translate-y-0")}
+                        className={cn(
+                           "transition-all duration-1000",
+                           buttonPressed || stage >= 3 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10 pointer-events-none"
+                        )}
                      >
                         <p className="text-lg md:text-2xl text-slate-500 dark:text-slate-400 font-medium leading-relaxed max-w-3xl mx-auto px-4 mt-6">
                            Discover a smarter way to master English grammar like a native.
                            Achieve fluency with confidence and precision.
                         </p>
 
-                        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4 md:pt-8 w-full max-w-md mx-auto">
-                          <Button asChild size="lg" className="h-14 px-8 md:px-10 rounded-lg text-lg font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg group w-full sm:w-auto">
-                            <a href="https://login.enfuture.uz/register" className="flex items-center justify-center gap-2">
+                        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-6 md:pt-8 w-full max-w-md mx-auto">
+                          <Button asChild size="lg" className="h-14 px-8 md:px-10 rounded-2xl text-lg font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xl shadow-indigo-200 dark:shadow-none group w-full sm:w-auto">
+                            <Link to="/register" className="flex items-center justify-center gap-2">
                               Start Now <ChevronRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                            </a>
+                            </Link>
                           </Button>
-                          <Button asChild variant="outline" size="lg" className="h-14 px-8 md:px-10 rounded-lg text-lg font-semibold border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:bg-slate-800 w-full sm:w-auto">
-                            <a href="https://login.enfuture.uz/register">View Courses</a>
+                          <Button asChild variant="outline" size="lg" className="h-14 px-8 md:px-10 rounded-2xl text-lg font-semibold border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:bg-slate-800 w-full sm:w-auto">
+                            <Link to="/register">View Courses</Link>
                           </Button>
                         </div>
 

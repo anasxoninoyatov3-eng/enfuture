@@ -234,7 +234,7 @@ export const LoginPage = () => {
 
                   <p className="text-center text-sm text-slate-500 dark:text-slate-400">
                     Hisobingiz yo'qmi?{' '}
-                    <a href="https://login.enfuture.uz/register" className="text-indigo-600 font-bold hover:underline">Ro'yxatdan o'ting</a>
+                    <button type="button" onClick={() => navigate('/register')} className="text-indigo-600 font-bold hover:underline cursor-pointer">Ro'yxatdan o'ting</button>
                   </p>
                 </motion.div>
               )}

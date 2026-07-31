@@ -171,12 +171,12 @@ export const RegisterPage = () => {
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: 'easeOut' }}
-        className="w-full max-w-[460px]"
+        className="w-full max-w-[460px] sm:max-w-[540px] md:max-w-[620px] transition-all duration-300"
       >
         {/* Logo */}
         <div className="text-center mb-8 space-y-3">
-          <img src="/favicon.svg?v=6" alt="Logo" className="h-14 w-14 mx-auto object-contain drop-shadow-xl" />
-          <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">ENK English</h1>
+          <img src="/favicon.svg?v=6" alt="Logo" className="h-16 w-16 mx-auto object-contain drop-shadow-xl" />
+          <h1 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">ENK English</h1>
           <p className="text-slate-500 dark:text-slate-400 font-medium">Hisobingizni yarating</p>
         </div>
 
@@ -187,7 +187,7 @@ export const RegisterPage = () => {
             {(['info', 'otp'] as Step[]).map((s, i) => (
               <div
                 key={s}
-                className={`flex-1 py-3 text-xs font-bold text-center uppercase tracking-widest transition-all ${step === s
+                className={`flex-1 py-4 text-xs font-bold text-center uppercase tracking-widest transition-all ${step === s
                   ? 'bg-indigo-600 text-white'
                   : i < (['info', 'otp'] as Step[]).indexOf(step)
                     ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600'
@@ -199,7 +199,7 @@ export const RegisterPage = () => {
             ))}
           </div>
 
-          <div className="p-8">
+          <div className="p-6 sm:p-10 md:p-12">
             <AnimatePresence mode="wait">
               {step === 'info' && (
                 <motion.div
@@ -207,25 +207,25 @@ export const RegisterPage = () => {
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
-                  className="space-y-5"
+                  className="space-y-6"
                 >
                   <div>
-                    <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-1">Shaxsiy ma'lumotlar</h2>
+                    <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-2">Shaxsiy ma'lumotlar</h2>
                     <p className="text-sm text-slate-500 dark:text-slate-400">Ismingiz va emailingizni kiriting</p>
                   </div>
 
                   {/* Name row */}
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1.5">Ism</label>
                       <div className="relative">
-                        <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300" />
+                        <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                         <input
                           type="text"
                           placeholder="Ali"
                           value={firstName}
                           onChange={e => setFirstName(e.target.value)}
-                          className="w-full h-11 pl-9 pr-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-600/50 transition-all text-slate-900 dark:text-white"
+                          className="w-full h-12 pl-10 pr-3 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-600/50 transition-all text-slate-900 dark:text-white"
                         />
                       </div>
                     </div>
@@ -236,7 +236,7 @@ export const RegisterPage = () => {
                         placeholder="Valiyev"
                         value={lastName}
                         onChange={e => setLastName(e.target.value)}
-                        className="w-full h-11 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-600/50 transition-all text-slate-900 dark:text-white"
+                        className="w-full h-12 px-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-600/50 transition-all text-slate-900 dark:text-white"
                       />
                     </div>
                   </div>
@@ -245,13 +245,13 @@ export const RegisterPage = () => {
                   <div>
                     <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1.5">Email</label>
                     <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300" />
+                      <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                       <input
                         type="email"
                         placeholder="ali@gmail.com"
                         value={email}
                         onChange={e => setEmail(e.target.value)}
-                        className="w-full h-11 pl-9 pr-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-600/50 transition-all text-slate-900 dark:text-white"
+                        className="w-full h-12 pl-10 pr-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-600/50 transition-all text-slate-900 dark:text-white"
                       />
                     </div>
                   </div>
@@ -263,10 +263,10 @@ export const RegisterPage = () => {
                       <button
                         type="button"
                         onClick={() => setLevelOpen(!levelOpen)}
-                        className="w-full h-12 px-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-medium flex items-center justify-between text-slate-900 dark:text-white transition-all hover:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-600/50"
+                        className="w-full h-13 px-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-medium flex items-center justify-between text-slate-900 dark:text-white transition-all hover:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-600/50 cursor-pointer"
                       >
                         <span className="flex items-center gap-2">
-                          <span>{selectedLevelInfo.emoji}</span>
+                          <span className="text-lg">{selectedLevelInfo.emoji}</span>
                           <span className="font-bold">{selectedLevelInfo.label}</span>
                         </span>
                         <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${levelOpen ? 'rotate-180' : ''}`} />
@@ -321,7 +321,7 @@ export const RegisterPage = () => {
                     type="button"
                     onClick={handleSendOtp}
                     disabled={loading}
-                    className="w-full h-13 py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-base flex items-center justify-center gap-3 transition-all shadow-lg shadow-indigo-100 dark:shadow-none disabled:opacity-60"
+                    className="w-full h-13 py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-base flex items-center justify-center gap-3 transition-all shadow-lg shadow-indigo-100 dark:shadow-none disabled:opacity-60 cursor-pointer"
                   >
                     {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : (
                       <>Davom etish <ArrowRight className="h-5 w-5" /></>
@@ -338,7 +338,7 @@ export const RegisterPage = () => {
                     type="button"
                     onClick={() => onGoogleLogin()}
                     disabled={isGoogleLoading}
-                    className="w-full h-12 rounded-2xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-white font-bold text-sm flex items-center justify-center gap-3 transition-all"
+                    className="w-full h-13 rounded-2xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-white font-bold text-sm flex items-center justify-center gap-3 transition-all cursor-pointer"
                   >
                     {isGoogleLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <GoogleIcon />}
                     {isGoogleLoading ? 'Ulanmoqda...' : 'Google bilan kiring'}
@@ -346,7 +346,7 @@ export const RegisterPage = () => {
 
                   <p className="text-center text-sm text-slate-500 dark:text-slate-400">
                     Allaqachon hisobingiz bormi?{' '}
-                    <a href="https://login.enfuture.uz/login" className="text-indigo-600 font-bold hover:underline">Kirish</a>
+                    <button type="button" onClick={() => navigate('/login')} className="text-indigo-600 font-bold hover:underline cursor-pointer">Kirish</button>
                   </p>
                 </motion.div>
               )}
@@ -363,11 +363,10 @@ export const RegisterPage = () => {
                     <div className="w-16 h-16 rounded-2xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center mx-auto mb-4">
                       <Mail className="h-8 w-8 text-indigo-600" />
                     </div>
-                    <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-1">Emailni tasdiqlang</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              <span className="font-bold text-slate-700 dark:text-slate-300">{email}</span> manziliga 6 xonali kod yuborildi
-            </p>
-
+                    <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-2">Emailni tasdiqlang</h2>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      <span className="font-bold text-slate-700 dark:text-slate-300">{email}</span> manziliga 6 xonali kod yuborildi
+                    </p>
                   </div>
 
                   {/* OTP inputs */}
@@ -380,7 +379,7 @@ export const RegisterPage = () => {
                       placeholder="123456"
                       value={otp}
                       onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                      className="w-full h-14 px-4 rounded-xl bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-center text-2xl font-black tracking-widest focus:outline-none focus:border-indigo-600 transition-all text-slate-900 dark:text-white"
+                      className="w-full h-16 px-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-center text-3xl font-black tracking-widest focus:outline-none focus:border-indigo-600 transition-all text-slate-900 dark:text-white"
                     />
                   </div>
 
@@ -398,7 +397,7 @@ export const RegisterPage = () => {
                     type="button"
                     onClick={handleVerifyOtp}
                     disabled={loading || otp.length !== 6}
-                    className="w-full py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-base flex items-center justify-center gap-3 transition-all shadow-lg shadow-indigo-100 dark:shadow-none disabled:opacity-60"
+                    className="w-full h-13 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-base flex items-center justify-center gap-3 transition-all shadow-lg shadow-indigo-100 dark:shadow-none disabled:opacity-60 cursor-pointer"
                   >
                     {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : (
                       <><CheckCircle className="h-5 w-5" /> Tasdiqlash</>
@@ -410,7 +409,7 @@ export const RegisterPage = () => {
                       type="button"
                       onClick={handleSendOtp}
                       disabled={loading}
-                      className="w-full py-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-60"
+                      className="w-full h-12 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-60 cursor-pointer"
                     >
                       {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
                       {loading ? 'Qayta yuborilmoqda...' : 'Kodni qayta yuborish'}
@@ -418,7 +417,7 @@ export const RegisterPage = () => {
                     <button
                       type="button"
                       onClick={() => { setStep('info'); setError(''); setOtp(''); }}
-                      className="w-full text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 font-medium transition-colors"
+                      className="w-full text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 font-bold transition-colors cursor-pointer"
                     >
                       ← Orqaga qaytish
                     </button>
