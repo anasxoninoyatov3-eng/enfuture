@@ -335,9 +335,9 @@ export const HomePage = () => {
                      <span className="text-indigo-600">confidently?</span>
                   </h2>
                   <div className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-4">
-                    <Button asChild size="lg" className="h-18 px-14 rounded-full text-xl font-bold bg-indigo-600 text-white shadow-2xl shadow-indigo-100 hover:bg-indigo-700 w-full sm:w-auto">
-                      <a href="https://login.enfuture.uz/register">Create Your Account</a>
-                    </Button>
+                     <Button asChild size="lg" className="h-18 px-14 rounded-full text-xl font-bold bg-indigo-600 text-white shadow-2xl shadow-indigo-100 hover:bg-indigo-700 w-full sm:w-auto">
+                       <Link to="/register">Create Your Account</Link>
+                     </Button>
                   </div>
                </div>
                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-indigo-50 rounded-full blur-[120px] opacity-30 -z-0" />

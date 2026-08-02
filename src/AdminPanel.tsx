@@ -34,7 +34,7 @@ export const AdminPanel = () => {
       const logs: any[] = [];
       querySnapshot.forEach((doc) => {
         logs.push({ id: doc.id, ...doc.data() });
-      });+
+      });
       // Sort by timestamp desc
       logs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
       setFirestoreAuditLogs(logs);
@@ -75,10 +75,7 @@ export const AdminPanel = () => {
     }
   };
 
-  const isAdminDomain = window.location.hostname === 'admin.enfuture.uz';
-  const isApprovedDevice = localStorage.getItem('enfuture_admin_v2') === 'approved';
-
-  if (user?.email?.toLowerCase() !== 'dinoyatova21@gmail.com' && !(isAdminDomain && isApprovedDevice)) {
+  if (user?.email?.toLowerCase() !== 'dinoyatova21@gmail.com') {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -102,7 +99,7 @@ export const AdminPanel = () => {
         <div className="space-y-1">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-50 border border-rose-100 text-[10px] font-bold text-rose-600 uppercase tracking-widest">
             <Shield className="h-3 w-3" />
-            Admin Authority - admin.enfuture.uz
+            Admin Boshqaruv Paneli
           </div>
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Boshqaruv Paneli</h1>
           <p className="text-slate-500 dark:text-slate-400 font-medium">Saytga kirganlar auditi va hisoblar nazorati.</p>
