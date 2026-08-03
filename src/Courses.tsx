@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   BookOpen, Trophy, Star, ArrowRight, Zap, Shield, Crown,
   Clock, Target, Sparkles, ChevronRight, Play, Edit3, X, Save,
-  FlaskConical, Layers, Lightbulb, MoreHorizontal
+  FlaskConical, Layers, Lightbulb, MoreHorizontal, HelpCircle
 } from 'lucide-react';
 import { cn } from '@/utils';
 import { useNavigate } from 'react-router-dom';
@@ -303,6 +303,10 @@ export const CoursesPage = () => {
     navigate(`/ai-tutor?level=${level}&topic=${encodeURIComponent(topic)}&auto=1`);
   };
 
+  const handleStartQuiz = (level: string, topic: string) => {
+    navigate(`/ai-tutor?level=${level}&topic=${encodeURIComponent(topic)}&mode=quiz`);
+  };
+
   const handleSaveLesson = (updated: LessonItem) => {
     setCurriculum(prev => prev.map(course => ({
       ...course,
@@ -584,6 +588,19 @@ export const CoursesPage = () => {
 
                             {/* Actions */}
                             <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                              {/* Test button */}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleStartQuiz(active.level, lesson.topic);
+                                }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 dark:text-amber-400 transition-all border border-amber-500/20"
+                              >
+                                <HelpCircle className="h-3.5 w-3.5" />
+                                Test
+                              </button>
+
                               {/* Edit button */}
                               <button
                                 type="button"

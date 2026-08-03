@@ -108,7 +108,7 @@ export async function createLesson(
   // 0. Check premade lessons repository
   const premadeKey = `${level}_${topic}`;
   const premadeMatch = PREMADE_LESSONS[premadeKey] || PREMADE_LESSONS[topic];
-  
+
   // 1. Try backend serverless route first
   try {
     const response = await fetch('/api/createLesson', {
@@ -218,6 +218,31 @@ export async function createLesson(
 
 import { PREMADE_QUIZZES } from '@/quizzes';
 
+function normalizeString(str: string): string {
+  return str.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function createSmartQuestion(
+  question: string,
+  correctOption: string,
+  wrongOptions: string[],
+  explanation: string
+) {
+  const allOptions = [correctOption, ...wrongOptions];
+  const shuffled = [...allOptions];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  const correctIndex = shuffled.indexOf(correctOption);
+  return {
+    question,
+    options: shuffled,
+    correctIndex,
+    explanation
+  };
+}
+
 function generateSmartFallbackQuiz(
   topic: string,
   level: string,
@@ -227,71 +252,66 @@ function generateSmartFallbackQuiz(
   return {
     topic: topic,
     questions: [
-      {
-        question: `Which option correctly uses "${topic}" in a sentence?`,
-        options: [
-          `She successfully applied "${topic}" in daily conversation.`,
+      createSmartQuestion(
+        `Which option correctly uses "${topic}" in a sentence?`,
+        `She successfully applied "${topic}" in daily conversation.`,
+        [
           `They did not understood the proper grammar form.`,
           `She are studying English every morning.`,
           `He don't know how to use this rule.`
         ],
-        correctIndex: 0,
-        explanation: isUz
+        isUz
           ? `Grammatik jihatdan to'g'ri berilgan variant: "${topic}" mavzusining to'g'ri qo'llanilishi.`
           : `Грамматически верный вариант использования темы "${topic}".`
-      },
-      {
-        question: `Choose the grammatically correct question structure for "${topic}":`,
-        options: [
-          `How is this rule applied in standard English?`,
+      ),
+      createSmartQuestion(
+        `Choose the grammatically correct structure for "${topic}":`,
+        `How is this rule applied in standard English?`,
+        [
           `Why you not practice this topic?`,
           `Where she goes yesterday?`,
           `What you are doing now?`
         ],
-        correctIndex: 0,
-        explanation: isUz
+        isUz
           ? `Ingliz tilida so'roq gaplarda yordamchi fe'l egadan oldinga o'tadi.`
           : `В вопросительных предложениях вспомогательный глагол ставится перед подлежащим.`
-      },
-      {
-        question: `What is the main function of "${topic}"?`,
-        options: [
-          `To express ideas and actions according to standard ${level} level grammar rules.`,
+      ),
+      createSmartQuestion(
+        `What is the main function of "${topic}"?`,
+        `To express ideas and actions according to standard ${level} level grammar rules.`,
+        [
           `To change the spelling of nouns randomly.`,
           `To replace all past tense verbs with present tense.`,
           `It has no specific function in English.`
         ],
-        correctIndex: 0,
-        explanation: isUz
+        isUz
           ? `${topic} mavzusi ${level} darajadagi muloqotda asosiy grammatik va semantik vazifani bajaradi.`
           : `Тема ${topic} выполняет ключевую грамматическую функцию для уровня ${level}.`
-      },
-      {
-        question: `Which word or structure is most frequently associated with "${topic}"?`,
-        options: [
-          `Contextual key indicator or auxiliary verb`,
+      ),
+      createSmartQuestion(
+        `Which structure is most frequently associated with "${topic}"?`,
+        `Contextual key indicator or auxiliary verb`,
+        [
           `Random adjective without noun`,
           `Plural noun suffix only`,
           `Silent letters`
         ],
-        correctIndex: 0,
-        explanation: isUz
-          ? `Mavzuni to'g me'yorida qo'llash uchun mos kalit so'zlar va ko'makchi fe'llardan foydalaniladi.`
+        isUz
+          ? `Mavzuni to'g'ri me'yorida qo'llash uchun mos kalit so'zlar va ko'makchi fe'llardan foydalaniladi.`
           : `Для правильного использования используются соответствующие ключевые слова и глаголы.`
-      },
-      {
-        question: `Complete the sentence: "By practicing ${topic} every day, you ___ your English fluency."`,
-        options: [
-          `will significantly improve`,
+      ),
+      createSmartQuestion(
+        `Complete the sentence: "By practicing ${topic} every day, you ___ your English fluency."`,
+        `will significantly improve`,
+        [
           `improving never`,
           `has improve`,
           `did improved`
         ],
-        correctIndex: 0,
-        explanation: isUz
+        isUz
           ? `Kelasi zamon natijasini ko'rsatish uchun "will improve" shakli to'g'ri keladi.`
           : `Для выражения будущего результата правильно использовать "will improve".`
-      }
+      )
     ]
   };
 }
@@ -301,11 +321,12 @@ export async function createQuiz(
   level: string,
   language: 'RU' | 'UZ'
 ): Promise<GeneratedQuiz> {
-  // 1. Check PREMADE_QUIZZES database first
-  const cleanTopic = topic.trim().toLowerCase();
-  const premadeMatchKey = Object.keys(PREMADE_QUIZZES).find(
-    k => k.toLowerCase() === cleanTopic || cleanTopic.includes(k.toLowerCase()) || k.toLowerCase().includes(cleanTopic)
-  );
+  // 1. Check PREMADE_QUIZZES database first with normalized matching
+  const normSearch = normalizeString(topic);
+  const premadeMatchKey = Object.keys(PREMADE_QUIZZES).find(k => {
+    const normK = normalizeString(k);
+    return normK === normSearch || normK.includes(normSearch) || normSearch.includes(normK);
+  });
 
   if (premadeMatchKey && PREMADE_QUIZZES[premadeMatchKey]?.questions?.length) {
     return {
@@ -328,7 +349,7 @@ export async function createQuiz(
     console.error('Gemini API failed for quiz generation:', err);
   }
 
-  // 3. Smart High-Quality Quiz Fallback (never shows broken "zaxira savol" text)
+  // 3. Smart High-Quality Quiz Fallback (never shows broken fallback text)
   return generateSmartFallbackQuiz(topic, level, language);
 }
 

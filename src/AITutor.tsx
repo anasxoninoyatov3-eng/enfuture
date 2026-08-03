@@ -102,10 +102,34 @@ export const AITutorPage = () => {
   // Topic selector panel
   const [showTopicPicker, setShowTopicPicker] = useState(false);
 
+  const isQuizMode = searchParams.get('mode') === 'quiz' || searchParams.get('quiz') === '1';
+
   useEffect(() => {
-    if (initialTopic && autoStart) loadLesson();
+    if (initialTopic) {
+      if (isQuizMode) {
+        startQuizDirectly(initialTopic, initialLevel);
+      } else if (autoStart) {
+        loadLesson();
+      }
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialTopic, autoStart]);
+  }, [initialTopic, autoStart, isQuizMode]);
+
+  async function startQuizDirectly(tName: string, tLvl: string) {
+    setLoading(true);
+    setError(null);
+    try {
+      const generatedQuiz = await createQuiz(tName, tLvl, language);
+      if (generatedQuiz) {
+        setCurrentQuiz(generatedQuiz);
+      }
+    } catch (e) {
+      console.warn("Direct quiz creation failed", e);
+      setError("Test yuklanishida xatolik yuz berdi.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   // When level changes, clear topic if it's not in the new level
   useEffect(() => {
