@@ -1,8 +1,8 @@
 import { Link } from 'react-router-dom';
-import { Bell, Search, Sun, Moon, Menu, X } from 'lucide-react';
-import { Button } from '@/Button';
+import { Search, Sun, Moon, Menu, X } from 'lucide-react';
 import { useUiStore } from '@/uiStore';
 import { useUserStore } from '@/userStore';
+import { NotificationBell } from '@/components/NotificationBell';
 
 export const Navbar = () => {
   const { isDarkMode, toggleDarkMode, isMobileMenuOpen, toggleMobileMenu } = useUiStore();
@@ -38,10 +38,7 @@ export const Navbar = () => {
           {isDarkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </button>
 
-        <Button variant="ghost" size="icon" className="hidden sm:flex relative h-9 w-9 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700">
-          <Bell className="h-4 w-4 text-slate-500 dark:text-slate-400" />
-          <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-indigo-600 border-2 border-white dark:border-slate-800" />
-        </Button>
+        <NotificationBell />
 
         <div className="hidden h-6 w-px bg-slate-100 dark:bg-slate-800 mx-1 md:block" />
 

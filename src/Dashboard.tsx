@@ -5,6 +5,7 @@ import { Button } from '@/Button';
 import { Play, Star, Flame, Trophy, TrendingUp, Zap, Rocket, ChevronRight, Globe, Terminal } from 'lucide-react';
 import { cn } from '@/utils';
 import { useUserStore } from '@/userStore';
+import { LessonSchedule } from '@/components/LessonSchedule';
 
 export const DashboardPage = () => {
   const { user } = useUserStore();
@@ -152,6 +153,11 @@ export const DashboardPage = () => {
               <div className="text-lg font-bold text-slate-900 dark:text-white">{user?.currentLevel || 'Junior'}</div>
            </div>
         </Card>
+
+        {/* Lesson Schedule & Notifications */}
+        <div className="md:col-span-6 lg:col-span-12 mt-4">
+          <LessonSchedule />
+        </div>
 
         {/* Recommendations */}
         <div className="md:col-span-6 lg:col-span-12 mt-8 space-y-8">
