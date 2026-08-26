@@ -82,14 +82,24 @@ YOUR PERSONALITY:
       const conversationHistory = messages.map(m => `${m.role === 'user' ? 'Student' : 'Josh'}: ${m.content}`).join('\n\n');
       const userPrompt = `${conversationHistory}\n\nStudent: ${userText}\n\nJosh:`;
 
-      const { generateContent } = await import('@/services/aiApi');
-      const output = await generateContent(systemInstruction, userPrompt);
+      const { generateContent, getSmartJoshFallback } = await import('@/services/aiApi');
+      let output = '';
+      try {
+        output = await generateContent(systemInstruction, userPrompt);
+      } catch (err) {
+        console.warn('Josh Chat API call error, using fallback:', err);
+        output = getSmartJoshFallback(userText);
+      }
+
+      if (!output || output.includes('API Key not valid') || output.includes('Gemini API Error')) {
+        output = getSmartJoshFallback(userText);
+      }
 
       const newMsgId = (Date.now() + 1).toString();
       setMessages(prev => [...prev, {
         id: newMsgId,
         role: 'assistant',
-        content: output || 'Kechirasiz, muammo yuz berdi.'
+        content: output
       }]);
 
       if (autoSpeak) {
@@ -100,13 +110,14 @@ YOUR PERSONALITY:
       }
 
     } catch (err: any) {
-      console.error(err);
-      let errorMsg = `⚠️ Xatolik yuz berdi: ${err.message || 'API bilan bog\'lanishda xato'}. API kalitni tekshiring.`;
+      console.error('Chat error:', err);
+      const { getSmartJoshFallback } = await import('@/services/aiApi');
+      const fallbackMsg = getSmartJoshFallback(userText);
       
       setMessages(prev => [...prev, {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: errorMsg
+        content: fallbackMsg
       }]);
     } finally {
       setIsLoading(false);
